@@ -1,125 +1,339 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Input,
+  Modal,
+  Pagination,
+  SearchInput,
+  Select,
+  Table,
+  Textarea,
+  FileUpload
+} from '../../components/shared'
 
-const Residents = () => {
-  // Data dummy untuk contoh
+const ResidentsList = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState('all')
+
+  // Data dummy untuk residents
   const residents = [
     {
       id: 1,
       name: 'John Doe',
-      education_level: 'SMA',
-      status: 'Aktif',
-      gender: 'Laki-laki',
-      birth_date: '2005-01-15',
+      room: 'L-01',
+      education: 'SMA',
+      status: 'active'
     },
-    // ... data lainnya
+    {
+      id: 2,
+      name: 'Jane Smith',
+      room: 'P-01', 
+      education: 'SMP',
+      status: 'inactive'
+    }
   ]
+
+  const columns = [
+    { header: 'Nama', accessor: 'name' },
+    { header: 'Kamar', accessor: 'room' },
+    { header: 'Pendidikan', accessor: 'education' },
+    { 
+      header: 'Status',
+      accessor: 'status',
+      render: (row) => (
+        <Badge 
+          variant={row.status === 'active' ? 'success' : 'danger'}
+        >
+          {row.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+        </Badge>
+      )
+    },
+    {
+      header: 'Aksi',
+      render: (row) => (
+        <div className="flex space-x-2">
+          <Button variant="secondary" size="sm">
+            Edit
+          </Button>
+          <Button variant="danger" size="sm">
+            Hapus
+          </Button>
+        </div>
+      )
+    }
+  ]
+
+  const handleSaveDraft = (e) => {
+    e.preventDefault()
+    // Simpan ke localStorage atau state management
+    // Tampilkan notifikasi
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    // Submit ke server
+    // Tampilkan notifikasi
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Data Penghuni</h1>
-        <Link
-          to="/residents/create"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          Tambah Penghuni
-        </Link>
-      </div>
+      <Alert
+        type="info"
+        title="Info"
+        message="Data akan diperbarui setiap 5 menit sekali"
+      />
 
-      {/* Filter Section */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            <option value="">Semua Jenjang</option>
-            <option value="TK">TK</option>
-            <option value="SD">SD</option>
-            <option value="SMP">SMP</option>
-            <option value="SMA">SMA</option>
-            <option value="Kuliah">Kuliah</option>
-            <option value="Magang">Magang</option>
-          </select>
-          <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            <option value="">Semua Status</option>
-            <option value="Aktif">Aktif</option>
-            <option value="Alumni">Alumni</option>
-            <option value="Magang">Magang</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Cari nama..."
-            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+      <Card
+        title="Daftar Penghuni"
+        actions={
+          <div className="flex space-x-4">
+            <SearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              placeholder="Cari penghuni..."
+              className="text-lg w-96" 
+            />
+            <Select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              options={[
+                { value: 'all', label: 'Semua Status' },
+                { value: 'active', label: 'Aktif' },
+                { value: 'inactive', label: 'Tidak Aktif' }
+              ]}
+            />
+            <Button onClick={() => setIsModalOpen(true)}>
+              Tambah Penghuni
+            </Button>
+          </div>
+        }
+      >
+        <Table
+          columns={columns}
+          data={residents}
+          isLoading={isLoading}
+          emptyMessage="Belum ada penghuni"
+        />
+
+        <div className="mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={10}
+            onPageChange={setCurrentPage}
           />
         </div>
-      </div>
+      </Card>
 
-      {/* Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nama
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Pendidikan
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Jenis Kelamin
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tanggal Lahir
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Aksi
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {residents.map((resident) => (
-              <tr key={resident.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{resident.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{resident.education_level}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    resident.status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {resident.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {resident.gender}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {resident.birth_date}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link
-                    to={`/residents/${resident.id}/edit`}
-                    className="text-indigo-600 hover:text-indigo-900 mr-4"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => {/* Handle delete */}}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Hapus
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Tambah Penghuni"
+        size="xl"
+      >
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          {/* Data Pribadi */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Data Pribadi</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Nama Lengkap"
+                placeholder="Masukkan nama lengkap"
+                required
+              />
+              <Input
+                label="NIK"
+                placeholder="Masukkan NIK"
+                required
+              />
+              <Input
+                label="Tempat Lahir"
+                placeholder="Masukkan tempat lahir"
+                required
+              />
+              <Input
+                type="date"
+                label="Tanggal Lahir"
+                required
+              />
+              <Select
+                label="Jenis Kelamin"
+                options={[
+                  { value: 'male', label: 'Laki-laki' },
+                  { value: 'female', label: 'Perempuan' }
+                ]}
+                required
+              />
+              <Input
+                label="No. Telepon"
+                placeholder="Masukkan no telepon"
+              />
+            </div>
+            <Textarea
+              label="Alamat Lengkap"
+              placeholder="Masukkan alamat lengkap"
+              required
+            />
+          </div>
+
+          {/* Data Pendidikan */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Data Pendidikan</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select
+                label="Jenjang Pendidikan"
+                options={[
+                  { value: 'tk', label: 'TK' },
+                  { value: 'sd', label: 'SD' },
+                  { value: 'smp', label: 'SMP' },
+                  { value: 'sma', label: 'SMA' },
+                  { value: 'kuliah', label: 'Kuliah' },
+                  { value: 'magang', label: 'Magang' }
+                ]}
+                required
+              />
+              <Input
+                label="Nama Sekolah/Institusi"
+                placeholder="Masukkan nama sekolah"
+                required
+              />
+              <Input
+                label="Kelas/Tingkat"
+                placeholder="Masukkan kelas/tingkat"
+              />
+              <Select
+                label="Kamar"
+                options={[
+                  { value: 'L-01', label: 'L-01' },
+                  { value: 'L-02', label: 'L-02' },
+                  { value: 'P-01', label: 'P-01' },
+                  { value: 'P-02', label: 'P-02' }
+                ]}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Data Bantuan */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Data Bantuan</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select
+                label="Jenis Bantuan"
+                options={[
+                  { value: 'yayasan', label: 'Yayasan' },
+                  { value: 'diakonia', label: 'Diakonia Sekolah' }
+                ]}
+                required
+              />
+              <Textarea
+                label="Detail Bantuan"
+                placeholder="Masukkan detail bantuan"
+              />
+            </div>
+          </div>
+
+          {/* Data Orang Tua */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Data Orang Tua/Wali</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Nama Ayah"
+                placeholder="Masukkan nama ayah"
+              />
+              <Input
+                label="No. Telepon Ayah"
+                placeholder="Masukkan no telepon ayah"
+              />
+              <Input
+                label="Nama Ibu"
+                placeholder="Masukkan nama ibu"
+              />
+              <Input
+                label="No. Telepon Ibu"
+                placeholder="Masukkan no telepon ibu"
+              />
+            </div>
+          </div>
+
+          {/* Dokumen */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Dokumen</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <FileUpload
+                label="Foto"
+                accept="image/*"
+                required
+              />
+              <FileUpload
+                label="Dokumen Pendukung"
+                accept=".pdf,.doc,.docx"
+                multiple
+                help="KTP, Kartu Keluarga, dll (PDF/DOC)"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-gray-500">
+              * Data yang disimpan sementara dapat dilanjutkan nanti
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                variant="secondary" 
+                onClick={() => setIsModalOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button 
+                variant="secondary"
+                type="button"
+                onClick={handleSaveDraft}
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" 
+                  />
+                </svg>
+                Simpan Sementara
+              </Button>
+              <Button type="submit">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M5 13l4 4L19 7" 
+                  />
+                </svg>
+                Simpan & Selesai
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
 
-export default Residents 
+export default ResidentsList 

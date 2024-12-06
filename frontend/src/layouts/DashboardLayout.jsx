@@ -1,5 +1,5 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   HomeIcon, 
   UserGroupIcon, 
@@ -17,6 +17,8 @@ import {
   ArchiveBoxIcon,
   AcademicCapIcon
 } from '@heroicons/react/24/outline'
+import LoadingSpinner from '../components/LoadingSpinner'
+import Notification from '../components/Notification'
 
 const DashboardLayout = () => {
   const [isAuthenticated] = useState(localStorage.getItem('token'))
@@ -24,6 +26,18 @@ const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const location = useLocation()
+  const [isLoading, setIsLoading] = useState(true)
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' })
+
+  useEffect(() => {
+    // Simulasi loading
+    setTimeout(() => setIsLoading(false), 500)
+  }, [])
+
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message })
+    setTimeout(() => setNotification({ show: false, type: '', message: '' }), 3000)
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: HomeIcon },
@@ -41,8 +55,19 @@ const DashboardLayout = () => {
   ]
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    window.location.reload()
+    showNotification('success', 'Berhasil logout')
+    setTimeout(() => {
+      localStorage.removeItem('token')
+      window.location.reload()
+    }, 1000)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
@@ -51,6 +76,59 @@ const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        message={notification.message}
+        onClose={() => setNotification({ ...notification, show: false })}
+      />
+      
+      {/* Sidebar dengan hover effect yang lebih baik */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
+          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+            <div className="flex items-center flex-shrink-0 px-4">
+              <OptimizedImage 
+                src="/ADMINCARE.svg"
+                alt="AdminCare"
+                className="h-12 w-auto"
+              />
+            </div>
+            <nav className="mt-5 flex-1 px-2 space-y-1">
+              {navigation.map((item) => {
+                const isActive = location.pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`
+                      group flex items-center px-3 py-2 text-sm font-medium rounded-md
+                      transition-all duration-200 ease-in-out
+                      ${isActive
+                        ? 'bg-indigo-50 text-indigo-600 transform scale-105'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }
+                    `}
+                  >
+                    <item.icon
+                      className={`
+                        mr-3 flex-shrink-0 h-5 w-5
+                        transition-colors duration-200 ease-in-out
+                        ${isActive
+                          ? 'text-indigo-500'
+                          : 'text-gray-400 group-hover:text-gray-500'
+                        }
+                      `}
+                    />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+        </div>
+      </div>
+
       {/* Sidebar Mobile */}
       <div className="lg:hidden">
         {isSidebarOpen && (
@@ -70,13 +148,6 @@ const DashboardLayout = () => {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Sidebar Desktop */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
-          <SidebarContent navigation={navigation} pathname={location.pathname} />
-        </div>
       </div>
 
       {/* Main Content */}
@@ -158,10 +229,10 @@ const SidebarContent = ({ navigation, pathname }) => {
   return (
     <div className="flex flex-col flex-grow pt-5">
       <div className="flex items-center justify-center flex-shrink-0 px-4 mb-5">
-        <img
-          className="h-12 w-auto"
+        <OptimizedImage 
           src="/ADMINCARE.svg"
           alt="AdminCare"
+          className="h-12 w-auto"
         />
       </div>
       <div className="mt-5 flex-grow flex flex-col">
@@ -193,6 +264,18 @@ const SidebarContent = ({ navigation, pathname }) => {
         </nav>
       </div>
     </div>
+  )
+}
+
+const OptimizedImage = ({ src, alt, ...props }) => {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      {...props}
+    />
   )
 }
 

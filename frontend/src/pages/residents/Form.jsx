@@ -1,423 +1,293 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Select,
+  Textarea,
+  FileUpload
+} from '../../components/shared'
 
 const ResidentForm = () => {
-  const navigate = useNavigate()
-  const { id } = useParams()
-  const isEditMode = !!id
-
   const [formData, setFormData] = useState({
     // Data Pribadi
     name: '',
-    birth_place: '',
-    birth_date: '',
-    gender: '',
     nik: '',
+    birthplace: '',
+    birthdate: '',
+    gender: '',
     address: '',
+    phone: '',
     
     // Data Pendidikan
-    education_level: '',
+    education_level: '', // TK/SD/SMP/SMA/Kuliah/Magang
     school_name: '',
-    class_year: '',
-    status: 'Aktif',
-    
-    // Data Alumni (jika status alumni)
-    university: '',
-    internship_place: '',
-    graduation_year: '',
+    grade: '',
+    major: '', // Untuk SMA/Kuliah
+    university: '', // Untuk alumni kuliah
+    internship_place: '', // Untuk magang
     
     // Data Bantuan
-    support_type: '', // Yayasan/Diakonia
-    support_detail: '',
-    support_period: '',
+    assistance_type: '', // Yayasan/Diakonia
+    assistance_detail: '',
     
     // Data Orang Tua/Wali
-    parent_name: '',
-    parent_nik: '',
-    parent_phone: '',
-    parent_job: '',
-    parent_income: '',
-    parent_address: '',
+    father_name: '',
+    father_occupation: '',
+    father_phone: '',
+    mother_name: '',
+    mother_occupation: '',
+    mother_phone: '',
+    guardian_name: '',
+    guardian_relation: '',
+    guardian_phone: '',
     
-    // Data Tambahan
-    health_condition: '',
-    special_needs: '',
-    achievements: '',
-    notes: ''
+    // Status dan Dokumen
+    status: 'active', // active/internship/alumni
+    photo: null,
+    documents: [] // KTP, Kartu Keluarga, dll
   })
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Handle submit logic here
-    console.log(formData)
-    navigate('/residents')
+    // Handle submit
   }
+
+  // Opsi untuk dropdown
+  const educationLevels = [
+    { value: 'tk', label: 'TK' },
+    { value: 'sd', label: 'SD' },
+    { value: 'smp', label: 'SMP' },
+    { value: 'sma', label: 'SMA' },
+    { value: 'kuliah', label: 'Kuliah' },
+    { value: 'magang', label: 'Magang' }
+  ]
+
+  const assistanceTypes = [
+    { value: 'yayasan', label: 'Yayasan' },
+    { value: 'diakonia', label: 'Diakonia Sekolah' }
+  ]
+
+  const statusOptions = [
+    { value: 'active', label: 'Aktif' },
+    { value: 'internship', label: 'Magang' },
+    { value: 'alumni', label: 'Alumni' }
+  ]
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {isEditMode ? 'Edit Penghuni' : 'Tambah Penghuni'}
-        </h1>
-      </div>
+      <Alert
+        type="info"
+        title="Informasi"
+        message="Pastikan semua data diisi dengan lengkap dan benar"
+      />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+      <Card title="Form Penghuni">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Data Pribadi */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Data Pribadi</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Data Pribadi</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">NIK</label>
-                <input
-                  type="text"
-                  name="nik"
-                  value={formData.nik}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tempat Lahir</label>
-                <input
-                  type="text"
-                  name="birth_place"
-                  value={formData.birth_place}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
-                <input
-                  type="date"
-                  name="birth_date"
-                  value={formData.birth_date}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option value="">Pilih Jenis Kelamin</option>
-                  <option value="Laki-laki">Laki-laki</option>
-                  <option value="Perempuan">Perempuan</option>
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Alamat</label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
+              <Input
+                label="Nama Lengkap"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+                required
+              />
+              <Input
+                label="NIK"
+                value={formData.nik}
+                onChange={(e) => setFormData(prev => ({...prev, nik: e.target.value}))}
+                required
+              />
+              <Input
+                label="Tempat Lahir"
+                value={formData.birthplace}
+                onChange={(e) => setFormData(prev => ({...prev, birthplace: e.target.value}))}
+                required
+              />
+              <Input
+                type="date"
+                label="Tanggal Lahir"
+                value={formData.birthdate}
+                onChange={(e) => setFormData(prev => ({...prev, birthdate: e.target.value}))}
+                required
+              />
+              <Select
+                label="Jenis Kelamin"
+                value={formData.gender}
+                onChange={(e) => setFormData(prev => ({...prev, gender: e.target.value}))}
+                options={[
+                  { value: 'male', label: 'Laki-laki' },
+                  { value: 'female', label: 'Perempuan' }
+                ]}
+                required
+              />
+              <Input
+                label="No. Telepon"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({...prev, phone: e.target.value}))}
+              />
             </div>
+            <Textarea
+              label="Alamat Lengkap"
+              value={formData.address}
+              onChange={(e) => setFormData(prev => ({...prev, address: e.target.value}))}
+              required
+            />
           </div>
 
           {/* Data Pendidikan */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Data Pendidikan</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Data Pendidikan</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Jenjang Pendidikan</label>
-                <select
-                  name="education_level"
-                  value={formData.education_level}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option value="">Pilih Jenjang</option>
-                  <option value="TK">TK</option>
-                  <option value="SD">SD</option>
-                  <option value="SMP">SMP</option>
-                  <option value="SMA">SMA</option>
-                  <option value="Kuliah">Kuliah</option>
-                  <option value="Magang">Magang</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nama Sekolah</label>
-                <input
-                  type="text"
-                  name="school_name"
-                  value={formData.school_name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              <Select
+                label="Jenjang Pendidikan"
+                value={formData.education_level}
+                onChange={(e) => setFormData(prev => ({...prev, education_level: e.target.value}))}
+                options={educationLevels}
+                required
+              />
+              <Input
+                label="Nama Sekolah/Institusi"
+                value={formData.school_name}
+                onChange={(e) => setFormData(prev => ({...prev, school_name: e.target.value}))}
+                required
+              />
+              <Input
+                label="Kelas/Tingkat"
+                value={formData.grade}
+                onChange={(e) => setFormData(prev => ({...prev, grade: e.target.value}))}
+              />
+              {['sma', 'kuliah'].includes(formData.education_level) && (
+                <Input
+                  label="Jurusan"
+                  value={formData.major}
+                  onChange={(e) => setFormData(prev => ({...prev, major: e.target.value}))}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tahun Angkatan</label>
-                <input
-                  type="text"
-                  name="class_year"
-                  value={formData.class_year}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              )}
+              {formData.education_level === 'kuliah' && (
+                <Input
+                  label="Universitas"
+                  value={formData.university}
+                  onChange={(e) => setFormData(prev => ({...prev, university: e.target.value}))}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option value="Aktif">Aktif</option>
-                  <option value="Alumni">Alumni</option>
-                  <option value="Magang">Magang</option>
-                </select>
-              </div>
+              )}
+              {formData.education_level === 'magang' && (
+                <Input
+                  label="Tempat Magang"
+                  value={formData.internship_place}
+                  onChange={(e) => setFormData(prev => ({...prev, internship_place: e.target.value}))}
+                />
+              )}
             </div>
           </div>
 
-          {/* Data Alumni (Conditional) */}
-          {formData.status === 'Alumni' && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Data Alumni</h3>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Universitas</label>
-                  <input
-                    type="text"
-                    name="university"
-                    value={formData.university}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tempat Magang</label>
-                  <input
-                    type="text"
-                    name="internship_place"
-                    value={formData.internship_place}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tahun Lulus</label>
-                  <input
-                    type="text"
-                    name="graduation_year"
-                    value={formData.graduation_year}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Data Bantuan */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Data Bantuan</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Data Bantuan</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Jenis Bantuan</label>
-                <select
-                  name="support_type"
-                  value={formData.support_type}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="">Pilih Jenis Bantuan</option>
-                  <option value="Yayasan">Yayasan</option>
-                  <option value="Diakonia">Diakonia Sekolah</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Detail Bantuan</label>
-                <input
-                  type="text"
-                  name="support_detail"
-                  value={formData.support_detail}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Periode Bantuan</label>
-                <input
-                  type="text"
-                  name="support_period"
-                  value={formData.support_period}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
+              <Select
+                label="Jenis Bantuan"
+                value={formData.assistance_type}
+                onChange={(e) => setFormData(prev => ({...prev, assistance_type: e.target.value}))}
+                options={assistanceTypes}
+                required
+              />
+              <Textarea
+                label="Detail Bantuan"
+                value={formData.assistance_detail}
+                onChange={(e) => setFormData(prev => ({...prev, assistance_detail: e.target.value}))}
+              />
             </div>
           </div>
 
           {/* Data Orang Tua/Wali */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Data Orang Tua/Wali</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Data Orang Tua/Wali</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nama Orang Tua</label>
-                <input
-                  type="text"
-                  name="parent_name"
-                  value={formData.parent_name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">NIK Orang Tua</label>
-                <input
-                  type="text"
-                  name="parent_nik"
-                  value={formData.parent_nik}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">No. Telp Orang Tua</label>
-                <input
-                  type="tel"
-                  name="parent_phone"
-                  value={formData.parent_phone}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Pekerjaan Orang Tua</label>
-                <input
-                  type="text"
-                  name="parent_job"
-                  value={formData.parent_job}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Penghasilan per Bulan</label>
-                <input
-                  type="text"
-                  name="parent_income"
-                  value={formData.parent_income}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Alamat Orang Tua</label>
-                <textarea
-                  name="parent_address"
-                  value={formData.parent_address}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
+              <Input
+                label="Nama Ayah"
+                value={formData.father_name}
+                onChange={(e) => setFormData(prev => ({...prev, father_name: e.target.value}))}
+              />
+              <Input
+                label="Pekerjaan Ayah"
+                value={formData.father_occupation}
+                onChange={(e) => setFormData(prev => ({...prev, father_occupation: e.target.value}))}
+              />
+              <Input
+                label="No. Telepon Ayah"
+                value={formData.father_phone}
+                onChange={(e) => setFormData(prev => ({...prev, father_phone: e.target.value}))}
+              />
+              <Input
+                label="Nama Ibu"
+                value={formData.mother_name}
+                onChange={(e) => setFormData(prev => ({...prev, mother_name: e.target.value}))}
+              />
+              <Input
+                label="Pekerjaan Ibu"
+                value={formData.mother_occupation}
+                onChange={(e) => setFormData(prev => ({...prev, mother_occupation: e.target.value}))}
+              />
+              <Input
+                label="No. Telepon Ibu"
+                value={formData.mother_phone}
+                onChange={(e) => setFormData(prev => ({...prev, mother_phone: e.target.value}))}
+              />
+              <Input
+                label="Nama Wali (jika ada)"
+                value={formData.guardian_name}
+                onChange={(e) => setFormData(prev => ({...prev, guardian_name: e.target.value}))}
+              />
+              <Input
+                label="Hubungan dengan Wali"
+                value={formData.guardian_relation}
+                onChange={(e) => setFormData(prev => ({...prev, guardian_relation: e.target.value}))}
+              />
+              <Input
+                label="No. Telepon Wali"
+                value={formData.guardian_phone}
+                onChange={(e) => setFormData(prev => ({...prev, guardian_phone: e.target.value}))}
+              />
             </div>
           </div>
 
-          {/* Data Tambahan */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Data Tambahan</h3>
+          {/* Status dan Dokumen */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Status dan Dokumen</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Kondisi Kesehatan</label>
-                <textarea
-                  name="health_condition"
-                  value={formData.health_condition}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Kebutuhan Khusus</label>
-                <textarea
-                  name="special_needs"
-                  value={formData.special_needs}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Prestasi</label>
-                <textarea
-                  name="achievements"
-                  value={formData.achievements}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Catatan Tambahan</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({...prev, status: e.target.value}))}
+                options={statusOptions}
+                required
+              />
+              <FileUpload
+                label="Foto"
+                accept="image/*"
+                onChange={(e) => setFormData(prev => ({...prev, photo: e.target.files[0]}))}
+                required
+              />
+              <FileUpload
+                label="Dokumen Pendukung"
+                accept=".pdf,.doc,.docx"
+                multiple
+                onChange={(e) => setFormData(prev => ({...prev, documents: Array.from(e.target.files)}))}
+                help="KTP, Kartu Keluarga, dll (PDF/DOC)"
+              />
             </div>
           </div>
 
           <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => navigate('/residents')}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              {isEditMode ? 'Update' : 'Simpan'}
-            </button>
+            <Button variant="secondary">Batal</Button>
+            <Button type="submit">Simpan</Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

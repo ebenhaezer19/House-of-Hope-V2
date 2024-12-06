@@ -6,10 +6,18 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        // Tambahkan warna kustom jika diperlukan
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+        'bounce-slow': 'bounce 3s infinite',
       },
+      transitionProperty: {
+        'height': 'height',
+        'spacing': 'margin, padding',
+      },
+      transitionDuration: {
+        '2000': '2000ms',
+      }
     },
   },
-  plugins: [],
+  plugins: []
 } 

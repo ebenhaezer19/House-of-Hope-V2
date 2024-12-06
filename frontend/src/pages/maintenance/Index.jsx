@@ -4,8 +4,10 @@ import {
   WrenchScrewdriverIcon,
   CheckCircleIcon,
   ClockIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  StarIcon
 } from '@heroicons/react/24/outline'
+import { StarIcon as StarIconSolid } from '@heroicons/react/20/solid'
 
 const MaintenanceManagement = () => {
   const [activeTab, setActiveTab] = useState('cleaning') // cleaning, maintenance, reports
@@ -87,6 +89,19 @@ const MaintenanceManagement = () => {
       issues: ['Lantai kotor', 'Jendela berdebu']
     }
   ]
+
+  // Pada bagian rating, gunakan StarIconSolid untuk bintang yang terisi
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, index) => (
+      <span key={index}>
+        {index < rating ? (
+          <StarIconSolid className="h-5 w-5 text-yellow-400" />
+        ) : (
+          <StarIcon className="h-5 w-5 text-gray-300" />
+        )}
+      </span>
+    ))
+  }
 
   return (
     <div className="space-y-6">
@@ -365,16 +380,7 @@ const MaintenanceManagement = () => {
                       </p>
                     </div>
                     <div className="flex items-center">
-                      {[...Array(5)].map((_, index) => (
-                        <StarIcon
-                          key={index}
-                          className={`h-5 w-5 ${
-                            index < report.rating
-                              ? 'text-yellow-400'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
+                      {renderStars(report.rating)}
                     </div>
                   </div>
 

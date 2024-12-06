@@ -1,7 +1,11 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Login from './pages/Login'
-import DashboardLayout from './layouts/DashboardLayout'
-import Dashboard from './pages/Dashboard'
+import LoadingSpinner from './components/LoadingSpinner'
+
+// Lazy load components
+const Login = lazy(() => import('./pages/Login'))
+const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 import Residents from './pages/residents/Index'
 import ResidentForm from './pages/residents/Form'
 import Problems from './pages/problems/Index'
@@ -22,52 +26,58 @@ import AcademicManagement from './pages/academic/Index'
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="profile" element={<Profile />} />
-          {/* Penghuni Routes */}
-          <Route path="residents" element={<Residents />} />
-          <Route path="residents/create" element={<ResidentForm />} />
-          <Route path="residents/:id/edit" element={<ResidentForm />} />
-          
-          {/* Masalah Routes */}
-          <Route path="problems" element={<Problems />} />
-          <Route path="problems/create" element={<ProblemForm />} />
-          <Route path="problems/:id/edit" element={<ProblemForm />} />
-          
-          {/* Tugas Routes */}
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="tasks/create" element={<TaskForm />} />
-          <Route path="tasks/:id/edit" element={<TaskForm />} />
-          
-          {/* Room Management Routes */}
-          <Route path="rooms" element={<RoomManagement />} />
-          <Route path="rooms/map" element={<RoomMap />} />
-          
-          {/* Payment Routes */}
-          <Route path="payments" element={<PaymentManagement />} />
-          
-          {/* Facility Routes */}
-          <Route path="facilities" element={<FacilityManagement />} />
-          
-          {/* Security Routes */}
-          <Route path="security" element={<SecurityManagement />} />
-          
-          {/* Maintenance Routes */}
-          <Route path="maintenance" element={<MaintenanceManagement />} />
-          
-          {/* Reports Routes */}
-          <Route path="reports" element={<ReportingAnalytics />} />
-          
-          {/* Inventory Routes */}
-          <Route path="inventory" element={<InventoryManagement />} />
-          
-          {/* Academic Routes */}
-          <Route path="academic" element={<AcademicManagement />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      }>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="profile" element={<Profile />} />
+            {/* Penghuni Routes */}
+            <Route path="residents" element={<Residents />} />
+            <Route path="residents/create" element={<ResidentForm />} />
+            <Route path="residents/:id/edit" element={<ResidentForm />} />
+            
+            {/* Masalah Routes */}
+            <Route path="problems" element={<Problems />} />
+            <Route path="problems/create" element={<ProblemForm />} />
+            <Route path="problems/:id/edit" element={<ProblemForm />} />
+            
+            {/* Tugas Routes */}
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="tasks/create" element={<TaskForm />} />
+            <Route path="tasks/:id/edit" element={<TaskForm />} />
+            
+            {/* Room Management Routes */}
+            <Route path="rooms" element={<RoomManagement />} />
+            <Route path="rooms/map" element={<RoomMap />} />
+            
+            {/* Payment Routes */}
+            <Route path="payments" element={<PaymentManagement />} />
+            
+            {/* Facility Routes */}
+            <Route path="facilities" element={<FacilityManagement />} />
+            
+            {/* Security Routes */}
+            <Route path="security" element={<SecurityManagement />} />
+            
+            {/* Maintenance Routes */}
+            <Route path="maintenance" element={<MaintenanceManagement />} />
+            
+            {/* Reports Routes */}
+            <Route path="reports" element={<ReportingAnalytics />} />
+            
+            {/* Inventory Routes */}
+            <Route path="inventory" element={<InventoryManagement />} />
+            
+            {/* Academic Routes */}
+            <Route path="academic" element={<AcademicManagement />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
