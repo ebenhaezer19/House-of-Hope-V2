@@ -47,10 +47,10 @@
 
 ## 🚀 Technology Stack  
 - **Frontend:** HTML, CSS, JavaScript  
-- **Backend:** Node.js (Express.js)  
-- **Database:** MySQL  
-- **Authentication:** Passport.js  
-- **Hosting:** Heroku  
+- **Backend:** Node.js (Express.js) PENDING
+- **Database:** MySQL PENDING
+- **Authentication:** Passport.js PENDING
+- **Hosting:** Heroku PENDING
 
 ## 🛠 How to Run  
 1. Clone this repository:  
