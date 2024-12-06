@@ -75,151 +75,163 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Notification
-        show={notification.show}
-        type={notification.type}
-        message={notification.message}
-        onClose={() => setNotification({ ...notification, show: false })}
+    <div className="min-h-screen bg-gray-100 relative">
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234338ca' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: '60px 60px'
+        }}
       />
-      
-      {/* Sidebar dengan hover effect yang lebih baik */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
-          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-            <div className="flex items-center flex-shrink-0 px-4">
-              <OptimizedImage 
-                src="/ADMINCARE.svg"
-                alt="AdminCare"
-                className="h-12 w-auto"
-              />
-            </div>
-            <nav className="mt-5 flex-1 px-2 space-y-1">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`
-                      group flex items-center px-3 py-2 text-sm font-medium rounded-md
-                      transition-all duration-200 ease-in-out
-                      ${isActive
-                        ? 'bg-indigo-50 text-indigo-600 transform scale-105'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }
-                    `}
-                  >
-                    <item.icon
+
+      <div className="relative z-10">
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
+        
+        {/* Sidebar Desktop */}
+        <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+          <div className="flex-1 flex flex-col min-h-0 bg-white/90 backdrop-blur-sm border-r border-gray-200">
+            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+              <div className="flex items-center flex-shrink-0 px-4">
+                <OptimizedImage 
+                  src="/ADMINCARE.svg"
+                  alt="AdminCare"
+                  className="h-12 w-auto"
+                />
+              </div>
+              <nav className="mt-5 flex-1 px-2 space-y-1">
+                {navigation.map((item) => {
+                  const isActive = location.pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
                       className={`
-                        mr-3 flex-shrink-0 h-5 w-5
-                        transition-colors duration-200 ease-in-out
+                        group flex items-center px-3 py-2 text-sm font-medium rounded-md
+                        transition-all duration-200 ease-in-out
                         ${isActive
-                          ? 'text-indigo-500'
-                          : 'text-gray-400 group-hover:text-gray-500'
+                          ? 'bg-indigo-50 text-indigo-600 transform scale-105'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }
                       `}
-                    />
-                    {item.name}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar Mobile */}
-      <div className="lg:hidden">
-        {isSidebarOpen && (
-          <div className="fixed inset-0 flex z-40">
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsSidebarOpen(false)} />
-            <div className="relative flex-1 flex flex-col max-w-xs w-64 bg-white">
-              <div className="absolute top-0 right-0 -mr-12 pt-2">
-                <button
-                  className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <span className="sr-only">Close sidebar</span>
-                  <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                </button>
-              </div>
-              <SidebarContent navigation={navigation} pathname={location.pathname} />
+                    >
+                      <item.icon
+                        className={`
+                          mr-3 flex-shrink-0 h-5 w-5
+                          transition-colors duration-200 ease-in-out
+                          ${isActive
+                            ? 'text-indigo-500'
+                            : 'text-gray-400 group-hover:text-gray-500'
+                          }
+                        `}
+                      />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </nav>
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Main Content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        {/* Navbar */}
-        <nav className="sticky top-0 z-10 bg-white shadow">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <button
-                  type="button"
-                  className="lg:hidden px-4 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                  onClick={() => setIsSidebarOpen(true)}
-                >
-                  <span className="sr-only">Open sidebar</span>
-                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-                </button>
+        {/* Sidebar Mobile */}
+        <div className="lg:hidden">
+          {isSidebarOpen && (
+            <div className="fixed inset-0 flex z-40">
+              <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsSidebarOpen(false)} />
+              <div className="relative flex-1 flex flex-col max-w-xs w-64 bg-white">
+                <div className="absolute top-0 right-0 -mr-12 pt-2">
+                  <button
+                    className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                    onClick={() => setIsSidebarOpen(false)}
+                  >
+                    <span className="sr-only">Close sidebar</span>
+                    <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </button>
+                </div>
+                <SidebarContent navigation={navigation} pathname={location.pathname} />
               </div>
-              <div className="flex items-center">
-                {/* Profile dropdown */}
-                <div className="relative">
+            </div>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:pl-64 flex flex-col flex-1">
+          {/* Navbar */}
+          <nav className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm shadow">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between h-16">
+                <div className="flex">
                   <button
                     type="button"
-                    className="flex items-center max-w-xs rounded-full focus:outline-none"
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="lg:hidden px-4 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                    onClick={() => setIsSidebarOpen(true)}
                   >
-                    <img
-                      className="h-8 w-8 rounded-full"
-                      src={user.avatar}
-                      alt={user.name}
-                    />
-                    <span className="ml-3 text-sm font-medium text-gray-700">{user.name}</span>
+                    <span className="sr-only">Open sidebar</span>
+                    <Bars3Icon className="h-6 w-6" aria-hidden="true" />
                   </button>
+                </div>
+                <div className="flex items-center">
+                  {/* Profile dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="flex items-center max-w-xs rounded-full focus:outline-none"
+                      onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    >
+                      <img
+                        className="h-8 w-8 rounded-full"
+                        src={user.avatar}
+                        alt={user.name}
+                      />
+                      <span className="ml-3 text-sm font-medium text-gray-700">{user.name}</span>
+                    </button>
 
-                  {/* Profile dropdown panel */}
-                  {isProfileOpen && (
-                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                      <div className="py-1">
-                        <div className="px-4 py-2">
-                          <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                          <p className="text-xs font-medium text-indigo-600 mt-1">{user.role}</p>
+                    {/* Profile dropdown panel */}
+                    {isProfileOpen && (
+                      <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                        <div className="py-1">
+                          <div className="px-4 py-2">
+                            <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <p className="text-xs font-medium text-indigo-600 mt-1">{user.role}</p>
+                          </div>
+                          <hr />
+                          <Link
+                            to="/profile"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            Pengaturan Profil
+                          </Link>
+                          <button
+                            onClick={handleLogout}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Keluar
+                          </button>
                         </div>
-                        <hr />
-                        <Link
-                          to="/profile"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          Pengaturan Profil
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Keluar
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </nav>
+          </nav>
 
-        {/* Page Content */}
-        <main className="flex-1">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <Outlet />
-          </div>
-        </main>
+          {/* Page Content */}
+          <main className="flex-1">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-6">
+                <Outlet />
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   )
