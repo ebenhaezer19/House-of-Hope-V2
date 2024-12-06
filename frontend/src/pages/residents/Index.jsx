@@ -16,6 +16,7 @@ import {
 
 const ResidentsList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isFullViewOpen, setIsFullViewOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -39,6 +40,7 @@ const ResidentsList = () => {
     }
   ]
 
+  // Kolom untuk tabel utama (ringkas)
   const columns = [
     { header: 'Nama', accessor: 'name' },
     { header: 'Kamar', accessor: 'room' },
@@ -67,6 +69,61 @@ const ResidentsList = () => {
         </div>
       )
     }
+  ]
+
+  // Kolom untuk view lengkap (tetap sama)
+  const fullColumns = [
+    { header: 'Nama', accessor: 'name' },
+    { header: 'Kamar', accessor: 'room' },
+    { header: 'Pendidikan', accessor: 'education' },
+    { header: 'NIK', accessor: 'nik' },
+    { header: 'Tempat Lahir', accessor: 'birthplace' },
+    { header: 'Tanggal Lahir', accessor: 'birthdate' },
+    { header: 'Jenis Kelamin', accessor: 'gender' },
+    { header: 'No. Telepon', accessor: 'phone' },
+    { header: 'Alamat', accessor: 'address' },
+    { 
+      header: 'Status',
+      accessor: 'status',
+      render: (row) => (
+        <Badge 
+          variant={row.status === 'active' ? 'success' : 'danger'}
+        >
+          {row.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+        </Badge>
+      )
+    },
+    {
+      header: 'Aksi',
+      render: (row) => (
+        <div className="flex space-x-2">
+          <Button variant="secondary" size="sm">
+            Edit
+          </Button>
+          <Button variant="danger" size="sm">
+            Hapus
+          </Button>
+        </div>
+      )
+    }
+  ]
+
+  // Data dummy yang lebih lengkap
+  const fullResidents = [
+    {
+      id: 1,
+      name: 'John Doe',
+      room: 'L-01',
+      education: 'SMA',
+      status: 'active',
+      nik: '1234567890123456',
+      birthplace: 'Jakarta',
+      birthdate: '2000-01-01',
+      gender: 'Laki-laki',
+      phone: '081234567890',
+      address: 'Jl. Contoh No. 123, Jakarta'
+    },
+    // ... data lainnya
   ]
 
   const handleSaveDraft = (e) => {
@@ -110,6 +167,32 @@ const ResidentsList = () => {
             />
             <Button onClick={() => setIsModalOpen(true)}>
               Tambah Penghuni
+            </Button>
+            <Button 
+              variant="secondary"
+              onClick={() => setIsFullViewOpen(true)}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
+                />
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+                />
+              </svg>
+              Lihat Semua Data
             </Button>
           </div>
         }
@@ -331,6 +414,78 @@ const ResidentsList = () => {
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Full View */}
+      <Modal
+        isOpen={isFullViewOpen}
+        onClose={() => setIsFullViewOpen(false)}
+        title="Data Lengkap Penghuni"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <SearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari penghuni..."
+              className="w-96"
+            />
+            <div className="flex space-x-2">
+              <Button variant="secondary" size="sm">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                  />
+                </svg>
+                Export Excel
+              </Button>
+              <Button variant="secondary" size="sm">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                  />
+                </svg>
+                Export PDF
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table
+              columns={fullColumns}
+              data={fullResidents}
+              isLoading={isLoading}
+              emptyMessage="Tidak ada data penghuni"
+            />
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={10}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   )
