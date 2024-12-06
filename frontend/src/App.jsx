@@ -14,6 +14,10 @@ import RoomMap from './pages/rooms/Map'
 import PaymentManagement from './pages/payments/Index'
 import FacilityManagement from './pages/facilities/Index'
 import SecurityManagement from './pages/security/Index'
+import MaintenanceManagement from './pages/maintenance/Index'
+import ReportingAnalytics from './pages/reports/Index'
+import InventoryManagement from './pages/inventory/Index'
+import AcademicManagement from './pages/academic/Index'
 
 function App() {
   return (
@@ -50,6 +54,18 @@ function App() {
           
           {/* Security Routes */}
           <Route path="security" element={<SecurityManagement />} />
+          
+          {/* Maintenance Routes */}
+          <Route path="maintenance" element={<MaintenanceManagement />} />
+          
+          {/* Reports Routes */}
+          <Route path="reports" element={<ReportingAnalytics />} />
+          
+          {/* Inventory Routes */}
+          <Route path="inventory" element={<InventoryManagement />} />
+          
+          {/* Academic Routes */}
+          <Route path="academic" element={<AcademicManagement />} />
         </Route>
       </Routes>
     </BrowserRouter>

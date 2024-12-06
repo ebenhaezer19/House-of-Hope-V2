@@ -11,7 +11,11 @@ import {
   XMarkIcon,
   CurrencyDollarIcon,
   BuildingOfficeIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  SparklesIcon,
+  ChartBarIcon,
+  ArchiveBoxIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline'
 
 const DashboardLayout = () => {
@@ -30,6 +34,10 @@ const DashboardLayout = () => {
     { name: 'Pelaporan Masalah', href: '/problems', icon: ExclamationCircleIcon },
     { name: 'Jadwal & Tugas', href: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Keamanan', href: '/security', icon: ShieldCheckIcon },
+    { name: 'Kebersihan', href: '/maintenance', icon: SparklesIcon },
+    { name: 'Laporan', href: '/reports', icon: ChartBarIcon },
+    { name: 'Inventaris', href: '/inventory', icon: ArchiveBoxIcon },
+    { name: 'Akademik', href: '/academic', icon: AcademicCapIcon },
   ]
 
   const handleLogout = () => {
