@@ -38,7 +38,7 @@
 ## 🛠 How to Run  
 1. Clone this repository:  
    ```bash  
-   git clone https://github.com/your-username/house-of-hope.git  
+   git clone https://github.com/ebenhaezer19/House-of-Hope-V2.git 
    ```  
 2. Install dependencies:  
    ```bash  
@@ -49,10 +49,10 @@
    ```bash  
    npm start  
    ```  
-5. Access the app at `http://localhost:3000`.  
+5. Access the app at `http://localhost:5173`.  
 
 ## 📧 Contact  
-For questions or collaboration, reach out to [your-email@example.com](mailto:your-email@example.com).  
+For questions or collaboration, reach out to [krisoprasebenhaezer@gmail.com](mailto:krisoprasebenhaezerl@gmail.com).  
 
 --- 
 
