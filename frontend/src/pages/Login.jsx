@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { findUser } from '../utils/mockDb'
+import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
     setFormData({
@@ -18,16 +20,18 @@ const Login = () => {
     setError('') // Clear error when user types
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const user = findUser(formData.email, formData.password)
+    setLoading(true)
+    setError('')
     
-    if (user) {
-      localStorage.setItem('token', 'dummy-token')
-      localStorage.setItem('user', JSON.stringify(user))
+    try {
+      await login(formData.email, formData.password)
       navigate('/')
-    } else {
-      setError('Email atau password salah')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Terjadi kesalahan saat login')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -52,7 +56,7 @@ const Login = () => {
           <div className="text-center mb-8">
             <div className="flex justify-center items-center">
               <img
-                className="h-12 w-auto ml-7"
+                className="h-12 w-auto ml-8"
                 src="/ADMINCARE.svg"
                 alt="AdminCare"
               />
@@ -96,6 +100,7 @@ const Login = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
+                disabled={loading}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
@@ -115,6 +120,7 @@ const Login = () => {
                 required
                 value={formData.password}
                 onChange={handleChange}
+                disabled={loading}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
@@ -148,9 +154,10 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Masuk
+                {loading ? 'Memproses...' : 'Masuk'}
               </button>
             </div>
           </form>

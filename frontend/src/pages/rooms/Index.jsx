@@ -1,94 +1,83 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   HomeIcon,
   UserGroupIcon,
-  ArrowPathIcon,
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
+import { roomService } from '../../services/room.service'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 const RoomManagement = () => {
-  const [activeGender, setActiveGender] = useState('male') // 'male' atau 'female'
-  
-  // Data dummy untuk rooms
-  const rooms = {
-    male: [
-      {
-        id: 1,
-        number: 'L-01',
-        gender: 'male',
-        capacity: 4,
-        current_occupants: 3,
-        status: 'occupied',
-        type: 'regular',
-        facilities: ['AC', 'Kamar Mandi Dalam'],
-        occupants: [
-          { id: 1, name: 'John Doe', education: 'SMA' },
-          { id: 2, name: 'Mike Johnson', education: 'SMP' },
-          { id: 3, name: 'Alex Brown', education: 'SD' }
-        ]
-      },
-      {
-        id: 2,
-        number: 'L-02',
-        gender: 'male',
-        capacity: 4,
-        current_occupants: 2,
-        status: 'occupied',
-        type: 'regular',
-        facilities: ['AC', 'Kamar Mandi Dalam'],
-        occupants: [
-          { id: 4, name: 'David Wilson', education: 'SMA' },
-          { id: 5, name: 'James Smith', education: 'SMP' }
-        ]
+  const [activeGender, setActiveGender] = useState('MALE')
+  const [rooms, setRooms] = useState({ MALE: [], FEMALE: [] })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Fetch rooms
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoading(true)
+        const response = await roomService.getAll()
+        
+        // Group rooms by gender
+        const maleRooms = response.data.data.filter(room => room.type === 'MALE')
+        const femaleRooms = response.data.data.filter(room => room.type === 'FEMALE')
+        
+        setRooms({
+          MALE: maleRooms,
+          FEMALE: femaleRooms
+        })
+        setError(null)
+      } catch (err) {
+        setError('Gagal memuat data kamar')
+        console.error('Error fetching rooms:', err)
+      } finally {
+        setLoading(false)
       }
-    ],
-    female: [
-      {
-        id: 3,
-        number: 'P-01',
-        gender: 'female',
-        capacity: 4,
-        current_occupants: 3,
-        status: 'occupied',
-        type: 'regular',
-        facilities: ['AC', 'Kamar Mandi Dalam'],
-        occupants: [
-          { id: 6, name: 'Jane Smith', education: 'SMA' },
-          { id: 7, name: 'Emily Davis', education: 'SMP' },
-          { id: 8, name: 'Sarah Wilson', education: 'SD' }
-        ]
-      },
-      {
-        id: 4,
-        number: 'P-02',
-        gender: 'female',
-        capacity: 4,
-        current_occupants: 2,
-        status: 'occupied',
-        type: 'regular',
-        facilities: ['AC', 'Kamar Mandi Dalam'],
-        occupants: [
-          { id: 9, name: 'Emma Brown', education: 'SMA' },
-          { id: 10, name: 'Sophia Lee', education: 'SMP' }
-        ]
-      }
-    ]
+    }
+
+    fetchRooms()
+  }, [])
+
+  // Calculate stats
+  const calculateStats = (roomList) => {
+    return {
+      total_rooms: roomList.length,
+      total_occupants: roomList.reduce((sum, room) => sum + room.residents.length, 0),
+      available_beds: roomList.reduce((sum, room) => sum + (room.capacity - room.residents.length), 0),
+      maintenance: roomList.filter(room => room.status === 'maintenance').length || 0
+    }
   }
 
   const stats = {
-    male: {
-      total_rooms: 2,
-      total_occupants: 5,
-      available_beds: 3,
-      maintenance: 0
-    },
-    female: {
-      total_rooms: 2,
-      total_occupants: 5,
-      available_beds: 3,
-      maintenance: 0
-    }
+    MALE: calculateStats(rooms.MALE),
+    FEMALE: calculateStats(rooms.FEMALE)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-indigo-600 hover:text-indigo-500"
+          >
+            Coba lagi
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const currentStats = stats[activeGender]
@@ -111,9 +100,9 @@ const RoomManagement = () => {
       <div className="bg-white shadow rounded-lg p-4">
         <div className="flex space-x-4">
           <button
-            onClick={() => setActiveGender('male')}
+            onClick={() => setActiveGender('MALE')}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeGender === 'male'
+              activeGender === 'MALE'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -121,9 +110,9 @@ const RoomManagement = () => {
             Kamar Laki-laki
           </button>
           <button
-            onClick={() => setActiveGender('female')}
+            onClick={() => setActiveGender('FEMALE')}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeGender === 'female'
+              activeGender === 'FEMALE'
                 ? 'bg-pink-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -202,21 +191,21 @@ const RoomManagement = () => {
                   Kamar {room.number}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {room.current_occupants}/{room.capacity} Penghuni
+                  {room.residents.length}/{room.capacity} Penghuni
                 </p>
               </div>
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  room.current_occupants === room.capacity
+                  room.residents.length === room.capacity
                     ? 'bg-red-100 text-red-800'
-                    : room.current_occupants === 0
+                    : room.residents.length === 0
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
                 }`}
               >
-                {room.current_occupants === room.capacity
+                {room.residents.length === room.capacity
                   ? 'Penuh'
-                  : room.current_occupants === 0
+                  : room.residents.length === 0
                   ? 'Kosong'
                   : 'Tersedia'}
               </span>
@@ -225,15 +214,15 @@ const RoomManagement = () => {
             <div className="mt-4">
               <h4 className="text-sm font-medium text-gray-900">Penghuni:</h4>
               <ul className="mt-2 divide-y divide-gray-200">
-                {room.occupants.map((occupant) => (
-                  <li key={occupant.id} className="py-2">
+                {room.residents.map((resident) => (
+                  <li key={resident.id} className="py-2">
                     <div className="flex items-center space-x-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {occupant.name}
+                          {resident.name}
                         </p>
                         <p className="text-sm text-gray-500 truncate">
-                          {occupant.education}
+                          {resident.education}
                         </p>
                       </div>
                     </div>

@@ -1,6 +1,8 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoadingSpinner from './components/LoadingSpinner'
+import { AuthProvider } from './contexts/AuthContext'
+import { useAuth } from './contexts/AuthContext'
 
 // Lazy load components
 const Login = lazy(() => import('./pages/Login'))
@@ -23,63 +25,88 @@ import ReportingAnalytics from './pages/reports/Index'
 import InventoryManagement from './pages/inventory/Index'
 import AcademicManagement from './pages/academic/Index'
 
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth()
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />
+  }
+  
+  return children
+}
+
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner />
-        </div>
-      }>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="profile" element={<Profile />} />
-            {/* Penghuni Routes */}
-            <Route path="residents" element={<Residents />} />
-            <Route path="residents/create" element={<ResidentForm />} />
-            <Route path="residents/:id/edit" element={<ResidentForm />} />
-            
-            {/* Masalah Routes */}
-            <Route path="problems" element={<Problems />} />
-            <Route path="problems/create" element={<ProblemForm />} />
-            <Route path="problems/:id/edit" element={<ProblemForm />} />
-            
-            {/* Tugas Routes */}
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="tasks/create" element={<TaskForm />} />
-            <Route path="tasks/:id/edit" element={<TaskForm />} />
-            
-            {/* Room Management Routes */}
-            <Route path="rooms" element={<RoomManagement />} />
-            <Route path="rooms/map" element={<RoomMap />} />
-            
-            {/* Payment Routes */}
-            <Route path="payments" element={<PaymentManagement />} />
-            
-            {/* Facility Routes */}
-            <Route path="facilities" element={<FacilityManagement />} />
-            
-            {/* Security Routes */}
-            <Route path="security" element={<SecurityManagement />} />
-            
-            {/* Maintenance Routes */}
-            <Route path="maintenance" element={<MaintenanceManagement />} />
-            
-            {/* Reports Routes */}
-            <Route path="reports" element={<ReportingAnalytics />} />
-            
-            {/* Inventory Routes */}
-            <Route path="inventory" element={<InventoryManagement />} />
-            
-            {/* Academic Routes */}
-            <Route path="academic" element={<AcademicManagement />} />
-          </Route>
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <LoadingSpinner />
+          </div>
+        }>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="profile" element={<Profile />} />
+              {/* Penghuni Routes */}
+              <Route path="residents" element={<Residents />} />
+              <Route path="residents/create" element={<ResidentForm />} />
+              <Route path="residents/:id/edit" element={<ResidentForm />} />
+              
+              {/* Masalah Routes */}
+              <Route path="problems" element={<Problems />} />
+              <Route path="problems/create" element={<ProblemForm />} />
+              <Route path="problems/:id/edit" element={<ProblemForm />} />
+              
+              {/* Tugas Routes */}
+              <Route path="tasks" element={<Tasks />} />
+              <Route path="tasks/create" element={<TaskForm />} />
+              <Route path="tasks/:id/edit" element={<TaskForm />} />
+              
+              {/* Room Management Routes */}
+              <Route path="rooms" element={<RoomManagement />} />
+              <Route path="rooms/map" element={<RoomMap />} />
+              
+              {/* Payment Routes */}
+              <Route path="payments" element={<PaymentManagement />} />
+              
+              {/* Facility Routes */}
+              <Route path="facilities" element={<FacilityManagement />} />
+              
+              {/* Security Routes */}
+              <Route path="security" element={<SecurityManagement />} />
+              
+              {/* Maintenance Routes */}
+              <Route path="maintenance" element={<MaintenanceManagement />} />
+              
+              {/* Reports Routes */}
+              <Route path="reports" element={<ReportingAnalytics />} />
+              
+              {/* Inventory Routes */}
+              <Route path="inventory" element={<InventoryManagement />} />
+              
+              {/* Academic Routes */}
+              <Route path="academic" element={<AcademicManagement />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
-export default App 
+export default App
