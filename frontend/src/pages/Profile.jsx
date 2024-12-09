@@ -1,18 +1,32 @@
-import { useState } from 'react'
-import { UserCircleIcon, KeyIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect } from 'react'
+import { UserCircleIcon, KeyIcon, BriefcaseIcon, ShieldCheckIcon, UserIcon } from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
 
 const Profile = () => {
-  const [user] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
+  const { user: authUser } = useAuth()
+  const [user, setUser] = useState(authUser || {})
   const [activeTab, setActiveTab] = useState('profile')
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
+    name: user.name || '',
+    email: user.email || '',
     phone: user.phone || '',
     oldPassword: '',
     newPassword: '',
     confirmPassword: ''
   })
+
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser)
+      setFormData(prev => ({
+        ...prev,
+        name: authUser.name || '',
+        email: authUser.email || '',
+        phone: authUser.phone || ''
+      }))
+    }
+  }, [authUser])
 
   const tabs = [
     { id: 'profile', name: 'Profil', icon: UserCircleIcon },
@@ -27,24 +41,75 @@ const Profile = () => {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Handle update logic here
-    setIsEditing(false)
+    try {
+      // Implementasi update profile
+      console.log('Updating profile:', formData)
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+    }
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    try {
+      // Implementasi change password
+      console.log('Changing password')
+    } catch (error) {
+      console.error('Error changing password:', error)
+    }
+  }
+
+  // Function untuk mendapatkan avatar berdasarkan role
+  const getAvatarByRole = (role) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN':
+        return '/images/admin-avatar.png' // Pastikan file ada di public/images/
+      case 'STAFF':
+        return '/images/staff-avatar.png'
+      default:
+        return '/images/default-avatar.png'
+    }
+  }
+
+  const getAvatarIcon = (role) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN':
+        return (
+          <ShieldCheckIcon 
+            className="h-32 w-32 text-purple-600 bg-purple-100 rounded-full p-4" 
+          />
+        )
+      case 'STAFF':
+        return (
+          <UserIcon 
+            className="h-32 w-32 text-indigo-600 bg-indigo-100 rounded-full p-4" 
+          />
+        )
+      default:
+        return (
+          <UserCircleIcon 
+            className="h-32 w-32 text-gray-600 bg-gray-100 rounded-full p-4" 
+          />
+        )
+    }
   }
 
   const renderProfileTab = () => (
     <div className="space-y-6">
       <div className="flex items-center space-x-8">
-        <img
-          src={user.avatar}
-          alt={user.name}
-          className="h-32 w-32 rounded-full"
-        />
+        {getAvatarIcon(user.role)}
         <div>
           <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
           <p className="text-sm text-gray-500">{user.email}</p>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-2">
+          <span className={`
+            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2
+            ${user.role?.toUpperCase() === 'ADMIN' 
+              ? 'bg-purple-100 text-purple-800' 
+              : 'bg-indigo-100 text-indigo-800'}
+          `}>
             {user.role}
           </span>
         </div>

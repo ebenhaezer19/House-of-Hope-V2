@@ -1,37 +1,18 @@
 import { Router } from 'express'
 import { RoomController } from '../controllers/room.controller'
-import { authMiddleware } from '../middleware/auth.middleware'
-import { validate } from '../middleware/validation.middleware'
-import { createRoomSchema, updateRoomSchema } from '../schemas/room.schema'
+import { authenticateToken } from '../middleware/auth.middleware'
 
 const router = Router()
 const roomController = new RoomController()
 
-// Apply auth middleware to all routes
-router.use(authMiddleware)
+// Protect all routes
+router.use(authenticateToken)
 
-// Get all rooms
-router.get('/', roomController.getAll)
-
-// Get one room
-router.get('/:id', roomController.getOne)
-
-// Create room
-router.post('/',
-  validate(createRoomSchema),
-  roomController.create
-)
-
-// Update room
-router.put('/:id',
-  validate(updateRoomSchema),
-  roomController.update
-)
-
-// Delete room
-router.delete('/:id', roomController.delete)
-
-// Check room availability
-router.get('/:id/availability', roomController.checkAvailability)
+// Routes
+router.get('/', roomController.getAllRooms.bind(roomController))
+router.post('/', roomController.createRoom.bind(roomController))
+router.get('/:id', roomController.getRoom.bind(roomController))
+router.put('/:id', roomController.updateRoom.bind(roomController))
+router.delete('/:id', roomController.deleteRoom.bind(roomController))
 
 export default router 

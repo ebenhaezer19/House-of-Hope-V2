@@ -32,7 +32,17 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        password: true
+      }
+    });
+
     if (!user) {
       throw new Error('Invalid credentials')
     }
@@ -42,12 +52,21 @@ export class AuthService {
       throw new Error('Invalid credentials')
     }
 
-    const token = jwt.sign({ id: user.id }, config.secret, {
-      expiresIn: config.expiresIn
-    })
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'rahasia',
+      { expiresIn: '24h' }
+    );
 
-    const { password: _, ...userWithoutPassword } = user
-    return { user: userWithoutPassword, token }
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      token
+    };
   }
 
   async validateToken(token: string) {

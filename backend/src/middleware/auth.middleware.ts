@@ -1,24 +1,33 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { config } from '../config/jwt.config'
-import { User } from '@prisma/client'
 
-interface JwtPayloadWithUser extends jwt.JwtPayload {
-  id: number;
+interface JwtPayload {
+  userId: number;
+  email: string;
+  role: string;
 }
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1]
-    if (!token) {
-      return res.status(401).json({ message: 'Authentication required' })
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload
     }
-
-    const decoded = jwt.verify(token, config.secret) as JwtPayloadWithUser
-    req.user = { id: decoded.id } as User
-
-    next()
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid token' })
   }
-} 
+}
+
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia') as JwtPayload;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid token' });
+  }
+}; 

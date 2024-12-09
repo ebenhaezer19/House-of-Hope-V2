@@ -15,7 +15,8 @@ import {
   SparklesIcon,
   ChartBarIcon,
   ArchiveBoxIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  UserIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Notification from '../components/Notification'
@@ -60,6 +61,17 @@ const DashboardLayout = () => {
       localStorage.removeItem('token')
       window.location.reload()
     }, 1000)
+  }
+
+  const getAvatarIcon = (role) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN':
+        return <ShieldCheckIcon className="h-8 w-8 text-purple-600 bg-purple-100 rounded-full p-1" />
+      case 'STAFF':
+        return <UserIcon className="h-8 w-8 text-indigo-600 bg-indigo-100 rounded-full p-1" />
+      default:
+        return <UserCircleIcon className="h-8 w-8 text-gray-600 bg-gray-100 rounded-full p-1" />
+    }
   }
 
   if (isLoading) {
@@ -183,11 +195,7 @@ const DashboardLayout = () => {
                       className="flex items-center max-w-xs rounded-full focus:outline-none"
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                     >
-                      <img
-                        className="h-8 w-8 rounded-full"
-                        src={user.avatar}
-                        alt={user.name}
-                      />
+                      {getAvatarIcon(user.role)}
                       <span className="ml-3 text-sm font-medium text-gray-700">{user.name}</span>
                     </button>
 
@@ -198,7 +206,14 @@ const DashboardLayout = () => {
                           <div className="px-4 py-2">
                             <p className="text-sm font-medium text-gray-900">{user.name}</p>
                             <p className="text-sm text-gray-500">{user.email}</p>
-                            <p className="text-xs font-medium text-indigo-600 mt-1">{user.role}</p>
+                            <span className={`
+                              inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1
+                              ${user.role?.toUpperCase() === 'ADMIN' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : 'bg-indigo-100 text-indigo-800'}
+                            `}>
+                              {user.role}
+                            </span>
                           </div>
                           <hr />
                           <Link

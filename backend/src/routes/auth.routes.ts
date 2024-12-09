@@ -1,18 +1,19 @@
 import { Router } from 'express'
 import { AuthController } from '../controllers/auth.controller'
-import { authMiddleware } from '../middleware/auth.middleware'
 import { loginLimiter } from '../middleware/rate-limit.middleware'
+import { authenticateToken } from '../middleware/auth.middleware'
 
 const router = Router()
 const authController = new AuthController()
 
-router.post('/register', loginLimiter, authController.register)
-router.post('/login', loginLimiter, authController.login)
-router.get('/me', authMiddleware, authController.getProfile)
+// Basic auth routes
+router.post('/register', loginLimiter, authController.register.bind(authController))
+router.post('/login', loginLimiter, authController.login.bind(authController))
+router.get('/me', authenticateToken, authController.getProfile.bind(authController))
 
 // Password reset routes
-router.post('/forgot-password', loginLimiter, authController.requestPasswordReset)
-router.post('/reset-password', loginLimiter, authController.resetPassword)
-router.post('/change-password', authMiddleware, authController.changePassword)
+router.post('/forgot-password', loginLimiter, authController.requestPasswordReset.bind(authController))
+router.post('/reset-password', loginLimiter, authController.resetPassword.bind(authController))
+router.post('/change-password', authenticateToken, authController.changePassword.bind(authController))
 
 export default router 

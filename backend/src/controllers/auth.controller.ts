@@ -29,14 +29,12 @@ export class AuthController {
   async getProfile(req: Request, res: Response) {
     try {
       const user = await prisma.user.findUnique({
-        where: { id: req.user?.id },
+        where: { id: req.user?.userId },
         select: {
           id: true,
           email: true,
           name: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true
+          role: true
         }
       })
 
@@ -76,7 +74,7 @@ export class AuthController {
 
   async changePassword(req: Request, res: Response) {
     try {
-      const userId = req.user?.id
+      const userId = req.user?.userId
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' })
       }

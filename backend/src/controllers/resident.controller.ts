@@ -7,7 +7,7 @@ const fileService = new FileService()
 
 export class ResidentController {
   // Get all residents
-  async getAll(req: Request, res: Response) {
+  async getAllResidents(req: Request, res: Response) {
     try {
       const result = await residentService.findAll(req.query)
       res.json(result)
@@ -17,7 +17,7 @@ export class ResidentController {
   }
 
   // Get one resident
-  async getOne(req: Request, res: Response) {
+  async getResident(req: Request, res: Response) {
     try {
       const id = Number(req.params.id)
       const resident = await residentService.findOne(id)
@@ -28,7 +28,7 @@ export class ResidentController {
   }
 
   // Create resident with documents
-  async create(req: Request, res: Response) {
+  async createResident(req: Request, res: Response) {
     try {
       const files = req.files as Express.Multer.File[]
       const documents = []
@@ -60,7 +60,7 @@ export class ResidentController {
   }
 
   // Update resident
-  async update(req: Request, res: Response) {
+  async updateResident(req: Request, res: Response) {
     try {
       const id = Number(req.params.id)
       const files = req.files as Express.Multer.File[]
@@ -93,7 +93,7 @@ export class ResidentController {
   }
 
   // Delete resident
-  async delete(req: Request, res: Response) {
+  async deleteResident(req: Request, res: Response) {
     try {
       const id = Number(req.params.id)
       const resident = await residentService.delete(id)

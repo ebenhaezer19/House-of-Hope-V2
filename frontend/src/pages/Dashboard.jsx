@@ -5,8 +5,12 @@ import {
   ClipboardDocumentListIcon,
   ChartBarIcon,
   ArrowUpIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,7 +32,31 @@ ChartJS.register(
 )
 
 const Dashboard = () => {
+  const { user } = useAuth()
   const [timeRange, setTimeRange] = useState('week')
+
+  const getAvatarIcon = (role) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN':
+        return (
+          <ShieldCheckIcon 
+            className="h-16 w-16 text-purple-600 bg-purple-100 rounded-full p-3" 
+          />
+        )
+      case 'STAFF':
+        return (
+          <UserIcon 
+            className="h-16 w-16 text-indigo-600 bg-indigo-100 rounded-full p-3" 
+          />
+        )
+      default:
+        return (
+          <UserCircleIcon 
+            className="h-16 w-16 text-gray-600 bg-gray-100 rounded-full p-3" 
+          />
+        )
+    }
+  }
 
   const stats = [
     {
@@ -114,6 +142,26 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center space-x-4">
+          {getAvatarIcon(user?.role)}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Welcome, {user?.name}
+            </h1>
+            <span className={`
+              inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2
+              ${user?.role?.toUpperCase() === 'ADMIN' 
+                ? 'bg-purple-100 text-purple-800' 
+                : 'bg-indigo-100 text-indigo-800'}
+            `}>
+              {user?.role}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
