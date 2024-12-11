@@ -2,8 +2,10 @@
   "name": "house-of-hope-v2",
   "version": "1.0.0",
   "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "install-deps": "cd frontend && npm install"
+    "dev": "ts-node src/server.ts",
+    "install-deps": "cd frontend && npm install",
+    "build": "tsc",
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
