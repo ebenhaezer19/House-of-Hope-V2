@@ -77,5 +77,11 @@ export const changePassword = (data: any) => api.post('/auth/change-password', d
 export const resetPassword = (data: { token: string; newPassword: string }): Promise<AuthResponse> => 
   api.post('/auth/reset-password', data);
 
-export const forgotPassword = (data: { email: string }): Promise<AuthResponse> => 
-  api.post('/auth/forgot-password', data); 
+export const forgotPassword = async (data: { email: string }) => {
+  try {
+    const response = await api.post('/auth/forgot-password', data)
+    return response
+  } catch (error) {
+    throw error
+  }
+} 

@@ -1,14 +1,12 @@
 import { z } from 'zod'
 
 export const createRoomSchema = z.object({
-  number: z.string().min(1, 'Nomor kamar harus diisi'),
-  type: z.enum(['MALE', 'FEMALE'], {
-    errorMap: () => ({ message: 'Tipe kamar harus MALE atau FEMALE' })
-  }),
-  capacity: z.number({
-    required_error: 'Kapasitas harus diisi',
-    invalid_type_error: 'Kapasitas harus berupa angka'
-  }).min(1, 'Kapasitas minimal 1')
+  number: z.string().min(1, 'Room number is required'),
+  type: z.enum(['SINGLE', 'DOUBLE', 'WARD']),
+  capacity: z.number().min(1),
+  occupied: z.number().default(0),
+  floor: z.number().optional(),
+  description: z.string().optional()
 })
 
 export const updateRoomSchema = createRoomSchema.partial()

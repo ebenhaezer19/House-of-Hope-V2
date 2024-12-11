@@ -1,160 +1,177 @@
-import { PrismaClient, User, Role } from '@prisma/client'
+import { PrismaClient, User } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { config } from '../config/jwt.config'
+import { emailService } from './email.service'
 import crypto from 'crypto'
-import { EmailService } from '../services/email.service'
-import { addEmailToQueue } from '../queues/email.queue'
-
-const prisma = new PrismaClient()
 
 export class AuthService {
-  private emailService: EmailService
+  private prisma: PrismaClient
 
   constructor() {
-    this.emailService = new EmailService()
+    this.prisma = new PrismaClient()
   }
 
-  async register(email: string, password: string, name: string) {
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+  async register(email: string, password: string, name: string): Promise<Omit<User, 'password'>> {
+    const existingUser = await this.prisma.user.findUnique({ where: { email } })
     if (existingUser) {
-      throw new Error('Email already exists')
+      throw new Error('Email already registered')
     }
 
-    // Check if this is the first user
-    const userCount = await prisma.user.count()
-    const role = userCount === 0 ? Role.ADMIN : Role.STAFF
-
     const hashedPassword = await bcrypt.hash(password, 10)
-    const user = await prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
-        name,
-        role
+        name
       }
     })
 
+    // Send welcome email directly
+    await emailService.sendEmail(
+      email,
+      'Welcome to House of Hope',
+      `<h1>Welcome ${name}!</h1><p>Thank you for registering.</p>`
+    )
+
     const { password: _, ...userWithoutPassword } = user
-
-    // Kirim welcome email melalui queue
-    await addEmailToQueue({
-      type: 'welcome',
-      data: { email, name }
-    })
-
     return userWithoutPassword
   }
 
   async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({ 
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        password: true
-      }
-    });
-
+    const user = await this.prisma.user.findUnique({ where: { email } })
     if (!user) {
       throw new Error('Invalid credentials')
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-    if (!isPasswordValid) {
+    const isValidPassword = await bcrypt.compare(password, user.password)
+    if (!isValidPassword) {
       throw new Error('Invalid credentials')
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'rahasia',
-      { expiresIn: '24h' }
-    );
+      { userId: user.id, email: user.email },
+      config.secret,
+      { expiresIn: config.expiresIn }
+    )
 
+    const { password: _, ...userWithoutPassword } = user
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      },
+      user: userWithoutPassword,
       token
-    };
+    }
   }
 
-  async validateToken(token: string) {
-    try {
-      const decoded = jwt.verify(token, config.secret) as { id: number }
-      const user = await prisma.user.findUnique({ where: { id: decoded.id } })
-      if (!user) {
-        throw new Error('User not found')
-      }
-      return user
-    } catch (error) {
-      throw new Error('Invalid token')
+  async getProfile(userId: number): Promise<Omit<User, 'password'>> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      throw new Error('User not found')
     }
+
+    const { password: _, ...userWithoutPassword } = user
+    return userWithoutPassword
+  }
+
+  async updateProfile(userId: number, data: Partial<User>): Promise<Omit<User, 'password'>> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data
+    })
+
+    const { password: _, ...userWithoutPassword } = user
+    return userWithoutPassword
+  }
+
+  async changePassword(userId: number, oldPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password)
+    if (!isValidPassword) {
+      throw new Error('Invalid old password')
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    })
+
+    return { message: 'Password changed successfully' }
   }
 
   async requestPasswordReset(email: string) {
     try {
-      const user = await prisma.user.findUnique({ where: { email } })
+      const user = await this.prisma.user.findUnique({ where: { email } })
       if (!user) {
         throw new Error('Email tidak terdaftar')
       }
 
       const resetToken = crypto.randomBytes(32).toString('hex')
-      const resetTokenHash = await bcrypt.hash(resetToken, 10)
+      const hashedToken = await bcrypt.hash(resetToken, 10)
 
-      await prisma.user.update({
+      await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          resetToken: resetTokenHash,
-          resetTokenExpiry: new Date(Date.now() + 3600000)
+          resetToken: hashedToken,
+          resetTokenExpiry: new Date(Date.now() + 3600000) // 1 jam
         }
       })
 
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+
       try {
-        await addEmailToQueue({
-          type: 'resetPassword',
-          data: { 
-            email: user.email, 
-            name: user.name, 
-            token: resetToken 
+        await emailService.sendEmail(
+          email,
+          'Reset Password',
+          `
+            <h1>Reset Password</h1>
+            <p>Anda menerima email ini karena Anda (atau seseorang) telah meminta reset password.</p>
+            <p>Klik link berikut untuk mereset password Anda:</p>
+            <a href="${resetUrl}">Reset Password</a>
+            <p>Link ini akan kadaluarsa dalam 1 jam.</p>
+            <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+          `
+        )
+      } catch (error) {
+        // Rollback perubahan jika email gagal terkirim
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            resetToken: null,
+            resetTokenExpiry: null
           }
         })
-      } catch (error) {
-        console.error('Failed to send reset password email:', error)
-        // Tidak throw error ke user, biarkan proses tetap berlanjut
+        throw new Error('Gagal mengirim email reset password. Silakan coba lagi nanti.')
       }
 
-      return { message: 'Jika email terdaftar, link reset password akan dikirim' }
+      return { message: 'Link reset password telah dikirim ke email Anda' }
     } catch (error) {
-      console.error('Reset password request error:', error)
       throw error
     }
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
-        resetToken: token,
-        resetTokenExpiry: {
-          gt: new Date()
-        }
+        resetToken: { not: null },
+        resetTokenExpiry: { gt: new Date() }
       }
     })
 
     if (!user) {
-      throw new Error('Token tidak valid atau sudah kadaluarsa')
+      throw new Error('Invalid or expired reset token')
     }
 
-    // Hash password baru
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    const isValidToken = await bcrypt.compare(token, user.resetToken!)
+    if (!isValidToken) {
+      throw new Error('Invalid reset token')
+    }
 
-    // Update password dan hapus token reset
-    await prisma.user.update({
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    await this.prisma.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
@@ -163,82 +180,6 @@ export class AuthService {
       }
     })
 
-    // Kirim notifikasi password berubah
-    await addEmailToQueue({
-      type: 'passwordChanged',
-      data: { 
-        email: user.email, 
-        name: user.name 
-      }
-    })
-
-    return { message: 'Password berhasil diubah' }
-  }
-
-  async changePassword(userId: number, oldPassword: string, newPassword: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) {
-      throw new Error('User tidak ditemukan')
-    }
-
-    // Verifikasi password lama
-    const isValidPassword = await bcrypt.compare(oldPassword, user.password)
-    if (!isValidPassword) {
-      throw new Error('Password lama tidak sesuai')
-    }
-
-    // Update password
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword }
-    })
-
-    // Kirim notifikasi password berubah
-    await addEmailToQueue({
-      type: 'passwordChanged',
-      data: { 
-        email: user.email, 
-        name: user.name 
-      }
-    })
-
-    return { message: 'Password berhasil diubah' }
-  }
-
-  async updateProfile(userId: number, data: any) {
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: data.name,
-        email: data.email
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true
-      }
-    })
-
-    return user
-  }
-
-  async getProfile(userId: number) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true
-      }
-    })
-
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    return user
+    return { message: 'Password reset successfully' }
   }
 } 

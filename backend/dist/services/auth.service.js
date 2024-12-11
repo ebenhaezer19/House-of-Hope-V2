@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
     for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
@@ -19,198 +28,134 @@ const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_config_1 = require("../config/jwt.config");
+const email_service_1 = require("./email.service");
 const crypto_1 = __importDefault(require("crypto"));
-const email_service_1 = require("../services/email.service");
-const email_queue_1 = require("../queues/email.queue");
-const prisma = new client_1.PrismaClient();
 class AuthService {
     constructor() {
-        this.emailService = new email_service_1.EmailService();
+        this.prisma = new client_1.PrismaClient();
     }
-    async register(email, password, name) {
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            throw new Error('Email already exists');
-        }
-        const userCount = await prisma.user.count();
-        const role = userCount === 0 ? client_1.Role.ADMIN : client_1.Role.STAFF;
-        const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const user = await prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                name,
-                role
+    register(email, password, name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existingUser = yield this.prisma.user.findUnique({ where: { email } });
+            if (existingUser) {
+                throw new Error('Email already registered');
             }
+            const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
+            const user = yield this.prisma.user.create({
+                data: {
+                    email,
+                    password: hashedPassword,
+                    name
+                }
+            });
+            // Send welcome email directly
+            yield email_service_1.emailService.sendEmail(email, 'Welcome to House of Hope', `<h1>Welcome ${name}!</h1><p>Thank you for registering.</p>`);
+            const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+            return userWithoutPassword;
         });
-        const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
-        await (0, email_queue_1.addEmailToQueue)({
-            type: 'welcome',
-            data: { email, name }
-        });
-        return userWithoutPassword;
     }
-    async login(email, password) {
-        const user = await prisma.user.findUnique({
-            where: { email },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-                password: true
+    login(email, password) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findUnique({ where: { email } });
+            if (!user) {
+                throw new Error('Invalid credentials');
             }
+            const isValidPassword = yield bcryptjs_1.default.compare(password, user.password);
+            if (!isValidPassword) {
+                throw new Error('Invalid credentials');
+            }
+            const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email }, jwt_config_1.config.secret, { expiresIn: jwt_config_1.config.expiresIn });
+            const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+            return {
+                user: userWithoutPassword,
+                token
+            };
         });
-        if (!user) {
-            throw new Error('Invalid credentials');
-        }
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new Error('Invalid credentials');
-        }
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'rahasia', { expiresIn: '24h' });
-        return {
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role
-            },
-            token
-        };
     }
-    async validateToken(token) {
-        try {
-            const decoded = jsonwebtoken_1.default.verify(token, jwt_config_1.config.secret);
-            const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    getProfile(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findUnique({ where: { id: userId } });
             if (!user) {
                 throw new Error('User not found');
             }
-            return user;
-        }
-        catch (error) {
-            throw new Error('Invalid token');
-        }
+            const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+            return userWithoutPassword;
+        });
     }
-    async requestPasswordReset(email) {
-        try {
-            const user = await prisma.user.findUnique({ where: { email } });
+    updateProfile(userId, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.update({
+                where: { id: userId },
+                data
+            });
+            const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+            return userWithoutPassword;
+        });
+    }
+    changePassword(userId, oldPassword, newPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findUnique({ where: { id: userId } });
             if (!user) {
-                throw new Error('Email tidak terdaftar');
+                throw new Error('User not found');
+            }
+            const isValidPassword = yield bcryptjs_1.default.compare(oldPassword, user.password);
+            if (!isValidPassword) {
+                throw new Error('Invalid old password');
+            }
+            const hashedPassword = yield bcryptjs_1.default.hash(newPassword, 10);
+            yield this.prisma.user.update({
+                where: { id: userId },
+                data: { password: hashedPassword }
+            });
+            return { message: 'Password changed successfully' };
+        });
+    }
+    requestPasswordReset(email) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findUnique({ where: { email } });
+            if (!user) {
+                throw new Error('User not found');
             }
             const resetToken = crypto_1.default.randomBytes(32).toString('hex');
-            const resetTokenHash = await bcryptjs_1.default.hash(resetToken, 10);
-            await prisma.user.update({
+            const hashedToken = yield bcryptjs_1.default.hash(resetToken, 10);
+            yield this.prisma.user.update({
                 where: { id: user.id },
                 data: {
-                    resetToken: resetTokenHash,
-                    resetTokenExpiry: new Date(Date.now() + 3600000)
+                    resetToken: hashedToken,
+                    resetTokenExpiry: new Date(Date.now() + 3600000) // 1 hour
                 }
             });
-            try {
-                await (0, email_queue_1.addEmailToQueue)({
-                    type: 'resetPassword',
-                    data: {
-                        email: user.email,
-                        name: user.name,
-                        token: resetToken
-                    }
-                });
-            }
-            catch (error) {
-                console.error('Failed to send reset password email:', error);
-            }
-            return { message: 'Jika email terdaftar, link reset password akan dikirim' };
-        }
-        catch (error) {
-            console.error('Reset password request error:', error);
-            throw error;
-        }
+            // Send reset email directly
+            yield email_service_1.emailService.sendEmail(email, 'Password Reset Request', `<p>Click <a href="${process.env.FRONTEND_URL}/reset-password?token=${resetToken}">here</a> to reset your password.</p>`);
+            return { message: 'Password reset email sent' };
+        });
     }
-    async resetPassword(token, newPassword) {
-        const user = await prisma.user.findFirst({
-            where: {
-                resetToken: token,
-                resetTokenExpiry: {
-                    gt: new Date()
+    resetPassword(token, newPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findFirst({
+                where: {
+                    resetToken: { not: null },
+                    resetTokenExpiry: { gt: new Date() }
                 }
+            });
+            if (!user) {
+                throw new Error('Invalid or expired reset token');
             }
-        });
-        if (!user) {
-            throw new Error('Token tidak valid atau sudah kadaluarsa');
-        }
-        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                resetToken: null,
-                resetTokenExpiry: null
+            const isValidToken = yield bcryptjs_1.default.compare(token, user.resetToken);
+            if (!isValidToken) {
+                throw new Error('Invalid reset token');
             }
+            const hashedPassword = yield bcryptjs_1.default.hash(newPassword, 10);
+            yield this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    password: hashedPassword,
+                    resetToken: null,
+                    resetTokenExpiry: null
+                }
+            });
+            return { message: 'Password reset successfully' };
         });
-        await (0, email_queue_1.addEmailToQueue)({
-            type: 'passwordChanged',
-            data: {
-                email: user.email,
-                name: user.name
-            }
-        });
-        return { message: 'Password berhasil diubah' };
-    }
-    async changePassword(userId, oldPassword, newPassword) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) {
-            throw new Error('User tidak ditemukan');
-        }
-        const isValidPassword = await bcryptjs_1.default.compare(oldPassword, user.password);
-        if (!isValidPassword) {
-            throw new Error('Password lama tidak sesuai');
-        }
-        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
-        await prisma.user.update({
-            where: { id: userId },
-            data: { password: hashedPassword }
-        });
-        await (0, email_queue_1.addEmailToQueue)({
-            type: 'passwordChanged',
-            data: {
-                email: user.email,
-                name: user.name
-            }
-        });
-        return { message: 'Password berhasil diubah' };
-    }
-    async updateProfile(userId, data) {
-        const user = await prisma.user.update({
-            where: { id: userId },
-            data: {
-                name: data.name,
-                email: data.email
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true
-            }
-        });
-        return user;
-    }
-    async getProfile(userId) {
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true
-            }
-        });
-        if (!user) {
-            throw new Error('User not found');
-        }
-        return user;
     }
 }
 exports.AuthService = AuthService;
-//# sourceMappingURL=auth.service.js.map

@@ -9,6 +9,7 @@ const routes_1 = __importDefault(require("./routes"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+// Request logging
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
@@ -17,20 +18,26 @@ app.use((req, res, next) => {
     });
     next();
 });
+// CORS configuration
 app.use((0, cors_1.default)({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Body parser
 app.use(express_1.default.json());
+// Root endpoint
 app.get('/', (_req, res) => {
     res.json({ message: 'House of Hope API' });
 });
+// API routes
 app.use('/api', routes_1.default);
+// 404 handler
 app.use((_req, res) => {
     res.status(404).json({ message: 'Not Found' });
 });
+// Error handler
 app.use((err, _req, res, _next) => {
     console.error('Error:', err);
     res.status(err.status || 500).json(Object.assign({ message: err.message || 'Internal Server Error' }, (process.env.NODE_ENV === 'development' && { stack: err.stack })));
@@ -46,4 +53,3 @@ app.listen(PORT, '0.0.0.0', () => {
 process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err);
 });
-//# sourceMappingURL=index.js.map

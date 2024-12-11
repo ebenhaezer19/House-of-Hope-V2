@@ -12,4 +12,3 @@ exports.storageConfig = {
     region: process.env.AWS_REGION,
     bucket: process.env.AWS_BUCKET_NAME
 };
-//# sourceMappingURL=storage.config.js.map

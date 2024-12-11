@@ -41,18 +41,18 @@ const DashboardLayout = () => {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon },
-    { name: 'Data Penghuni', href: '/residents', icon: UserGroupIcon },
-    { name: 'Manajemen Kamar', href: '/rooms', icon: HomeIcon },
-    { name: 'Pembayaran', href: '/payments', icon: CurrencyDollarIcon },
-    { name: 'Fasilitas', href: '/facilities', icon: BuildingOfficeIcon },
-    { name: 'Pelaporan Masalah', href: '/problems', icon: ExclamationCircleIcon },
-    { name: 'Jadwal & Tugas', href: '/tasks', icon: ClipboardDocumentListIcon },
-    { name: 'Keamanan', href: '/security', icon: ShieldCheckIcon },
-    { name: 'Kebersihan', href: '/maintenance', icon: SparklesIcon },
-    { name: 'Laporan', href: '/reports', icon: ChartBarIcon },
-    { name: 'Inventaris', href: '/inventory', icon: ArchiveBoxIcon },
-    { name: 'Akademik', href: '/academic', icon: AcademicCapIcon },
+    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'Data Penghuni', href: '/dashboard/residents', icon: UserGroupIcon },
+    { name: 'Manajemen Kamar', href: '/dashboard/rooms', icon: HomeIcon },
+    { name: 'Pembayaran', href: '/dashboard/payments', icon: CurrencyDollarIcon },
+    { name: 'Fasilitas', href: '/dashboard/facilities', icon: BuildingOfficeIcon },
+    { name: 'Pelaporan Masalah', href: '/dashboard/problems', icon: ExclamationCircleIcon },
+    { name: 'Jadwal & Tugas', href: '/dashboard/tasks', icon: ClipboardDocumentListIcon },
+    { name: 'Keamanan', href: '/dashboard/security', icon: ShieldCheckIcon },
+    { name: 'Kebersihan', href: '/dashboard/maintenance', icon: SparklesIcon },
+    { name: 'Laporan', href: '/dashboard/reports', icon: ChartBarIcon },
+    { name: 'Inventaris', href: '/dashboard/inventory', icon: ArchiveBoxIcon },
+    { name: 'Akademik', href: '/dashboard/academic', icon: AcademicCapIcon },
   ]
 
   const handleLogout = () => {
@@ -217,7 +217,7 @@ const DashboardLayout = () => {
                           </div>
                           <hr />
                           <Link
-                            to="/profile"
+                            to="/dashboard/profile"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             onClick={() => setIsProfileOpen(false)}
                           >
@@ -265,7 +265,7 @@ const SidebarContent = ({ navigation, pathname }) => {
       <div className="mt-5 flex-grow flex flex-col">
         <nav className="flex-1 px-2 pb-4 space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link
                 key={item.name}

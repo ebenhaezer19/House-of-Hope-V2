@@ -1,73 +1,49 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EmailService = void 0;
+exports.emailService = exports.EmailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 class EmailService {
     constructor() {
         this.transporter = nodemailer_1.default.createTransport({
             host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || '587'),
-            secure: false,
+            port: Number(process.env.SMTP_PORT),
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
             }
         });
     }
-    getEmailTemplate(type, data) {
-        switch (type) {
-            case 'reset':
-                return `
-          <h1>Reset Password</h1>
-          <p>Hi ${data.name || 'there'},</p>
-          <p>Click the link below to reset your password:</p>
-          <a href="${data.resetUrl}">${data.resetUrl}</a>
-          <p>This link will expire in 1 hour.</p>
-        `;
-            case 'welcome':
-                return `
-          <h1>Selamat Datang di House of Hope</h1>
-          <p>Hi ${data.name},</p>
-          <p>Terima kasih telah bergabung dengan House of Hope.</p>
-        `;
-            case 'passwordChanged':
-                return `
-          <h1>Password Berhasil Diubah</h1>
-          <p>Hi ${data.name},</p>
-          <p>Password akun Anda telah berhasil diubah.</p>
-        `;
-            default:
-                return '';
-        }
-    }
-    async sendResetPasswordEmail(email, resetToken, name) {
-        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        await this.transporter.sendMail({
-            from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-            to: email,
-            subject: 'Reset Password - House of Hope',
-            html: this.getEmailTemplate('reset', { name, resetUrl })
-        });
-    }
-    async sendWelcomeEmail(email, name) {
-        await this.transporter.sendMail({
-            from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-            to: email,
-            subject: 'Selamat Datang di House of Hope',
-            html: this.getEmailTemplate('welcome', { name })
-        });
-    }
-    async sendPasswordChangedEmail(email, name) {
-        await this.transporter.sendMail({
-            from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-            to: email,
-            subject: 'Password Berhasil Diubah - House of Hope',
-            html: this.getEmailTemplate('passwordChanged', { name })
+    sendEmail(to, subject, html) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield this.transporter.sendMail({
+                    from: process.env.SMTP_FROM,
+                    to,
+                    subject,
+                    html
+                });
+                console.log(`Email sent to ${to}`);
+                return result;
+            }
+            catch (error) {
+                console.error('Email sending failed:', error);
+                throw error;
+            }
         });
     }
 }
 exports.EmailService = EmailService;
-//# sourceMappingURL=email.service.js.map
+// Export singleton instance
+exports.emailService = new EmailService();

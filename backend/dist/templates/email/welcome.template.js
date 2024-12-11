@@ -26,4 +26,3 @@ const welcomeTemplate = (name) => `
 </div>
 `;
 exports.welcomeTemplate = welcomeTemplate;
-//# sourceMappingURL=welcome.template.js.map

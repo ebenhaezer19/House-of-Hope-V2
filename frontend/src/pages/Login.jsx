@@ -3,32 +3,19 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
-  const navigate = useNavigate()
-  const { login } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-
     try {
-      const formData = new FormData(e.target)
-      const email = formData.get('email')
-      const password = formData.get('password')
-
       await login(email, password)
       navigate('/dashboard')
     } catch (error) {
-      console.error('Login error:', error)
-      if (error.code === 'ERR_NETWORK') {
-        setError('Tidak dapat terhubung ke server. Mohon cek koneksi Anda.')
-      } else {
-        setError(error.response?.data?.message || 'Gagal login. Silakan coba lagi.')
-      }
-    } finally {
-      setLoading(false)
+      setError(error.message || 'Failed to login')
     }
   }
 
@@ -96,6 +83,8 @@ const Login = () => {
                 autoComplete="email"
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
@@ -113,6 +102,8 @@ const Login = () => {
                 autoComplete="current-password"
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
@@ -145,10 +136,9 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {loading ? 'Mohon tunggu...' : 'Masuk'}
+                Masuk
               </button>
             </div>
           </form>

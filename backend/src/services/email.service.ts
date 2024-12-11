@@ -6,68 +6,39 @@ export class EmailService {
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
+      port: Number(process.env.SMTP_PORT),
       secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     })
   }
 
-  private getEmailTemplate(type: string, data: any) {
-    switch (type) {
-      case 'reset':
-        return `
-          <h1>Reset Password</h1>
-          <p>Hi ${data.name || 'there'},</p>
-          <p>Click the link below to reset your password:</p>
-          <a href="${data.resetUrl}">${data.resetUrl}</a>
-          <p>This link will expire in 1 hour.</p>
-        `
-      case 'welcome':
-        return `
-          <h1>Selamat Datang di House of Hope</h1>
-          <p>Hi ${data.name},</p>
-          <p>Terima kasih telah bergabung dengan House of Hope.</p>
-        `
-      case 'passwordChanged':
-        return `
-          <h1>Password Berhasil Diubah</h1>
-          <p>Hi ${data.name},</p>
-          <p>Password akun Anda telah berhasil diubah.</p>
-        `
-      default:
-        return ''
+  async sendEmail(to: string, subject: string, html: string) {
+    try {
+      const result = await this.transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to,
+        subject,
+        html
+      })
+      console.log(`Email sent to ${to}`)
+      return result
+    } catch (error: unknown) {
+      console.error('Email sending failed:', error)
+      
+      // Handle error berdasarkan tipenya
+      if (error instanceof Error) {
+        throw new Error(`Failed to send email: ${error.message}`)
+      } else {
+        throw new Error('Failed to send email: Unknown error occurred')
+      }
     }
   }
+}
 
-  async sendResetPasswordEmail(email: string, resetToken: string, name?: string) {
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
-    
-    await this.transporter.sendMail({
-      from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Reset Password - House of Hope',
-      html: this.getEmailTemplate('reset', { name, resetUrl })
-    })
-  }
-
-  async sendWelcomeEmail(email: string, name: string) {
-    await this.transporter.sendMail({
-      from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Selamat Datang di House of Hope',
-      html: this.getEmailTemplate('welcome', { name })
-    })
-  }
-
-  async sendPasswordChangedEmail(email: string, name: string) {
-    await this.transporter.sendMail({
-      from: `"House of Hope" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Password Berhasil Diubah - House of Hope',
-      html: this.getEmailTemplate('passwordChanged', { name })
-    })
-  }
-} 
+export const emailService = new EmailService() 

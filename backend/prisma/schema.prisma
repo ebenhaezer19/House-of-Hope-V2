@@ -48,11 +48,15 @@ model Resident {
 }
 
 model Room {
-  id        Int        @id @default(autoincrement())
-  number    String     @unique
-  type      RoomType
-  capacity  Int
-  residents Resident[]
+  id          Int        @id @default(autoincrement())
+  number      String     @unique
+  type        RoomType
+  capacity    Int
+  floor       Int?
+  description String?
+  residents   Resident[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 enum Role {
@@ -76,8 +80,9 @@ enum Education {
 }
 
 enum RoomType {
-  MALE
-  FEMALE
+  SINGLE
+  DOUBLE
+  WARD
 }
 
 enum AssistanceType {

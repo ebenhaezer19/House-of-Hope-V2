@@ -1,13 +1,26 @@
 import { Request, Response } from 'express'
-import { DashboardService } from '../services/dashboard.service'
-
-const dashboardService = new DashboardService()
+import { PrismaClient } from '@prisma/client'
 
 export class DashboardController {
-  async getDashboardStats(req: Request, res: Response) {
+  private prisma: PrismaClient
+
+  constructor() {
+    this.prisma = new PrismaClient()
+  }
+
+  async getStats(req: Request, res: Response) {
     try {
-      const stats = await dashboardService.getStats()
-      res.json(stats)
+      const [totalResidents, totalRooms, totalUsers] = await Promise.all([
+        this.prisma.resident.count(),
+        this.prisma.room.count(),
+        this.prisma.user.count()
+      ])
+
+      res.json({
+        totalResidents,
+        totalRooms,
+        totalUsers
+      })
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }
@@ -15,35 +28,53 @@ export class DashboardController {
 
   async getResidentsByGender(req: Request, res: Response) {
     try {
-      const stats = await dashboardService.getResidentsByGender()
+      const stats = await this.prisma.resident.groupBy({
+        by: ['gender'],
+        _count: true
+      })
+
       res.json(stats)
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }
   }
 
-  async getResidentsByEducation(req: Request, res: Response) {
+  async getRoomsOccupancy(req: Request, res: Response) {
     try {
-      const stats = await dashboardService.getResidentsByEducation()
-      res.json(stats)
-    } catch (error: any) {
-      res.status(500).json({ message: error.message })
-    }
-  }
+      const rooms = await this.prisma.room.findMany({
+        include: {
+          _count: {
+            select: { residents: true }
+          }
+        }
+      })
 
-  async getRecentResidents(req: Request, res: Response) {
-    try {
-      const residents = await dashboardService.getRecentResidents()
-      res.json(residents)
-    } catch (error: any) {
-      res.status(500).json({ message: error.message })
-    }
-  }
+      const occupancy = rooms.map(room => ({
+        number: room.number,
+        capacity: room.capacity,
+        occupied: room._count.residents
+      }))
 
-  async getRoomOccupancy(req: Request, res: Response) {
-    try {
-      const occupancy = await dashboardService.getRoomOccupancy()
       res.json(occupancy)
+    } catch (error: any) {
+      res.status(500).json({ message: error.message })
+    }
+  }
+
+  async getRecentActivities(req: Request, res: Response) {
+    try {
+      const activities = await this.prisma.resident.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      })
+
+      res.json(activities)
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }

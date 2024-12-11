@@ -56,10 +56,13 @@ function App() {
           </div>
         }>
           <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={
+
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>

@@ -10,9 +10,10 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setStatus({ type: '', message: '' })
+
     try {
-      const response = await forgotPassword({ email: email })
-      console.log('Forgot password response:', response)
+      const response = await forgotPassword({ email })
       setStatus({
         type: 'success',
         message: response.data.message || 'Link reset password telah dikirim ke email Anda'
@@ -21,7 +22,7 @@ const ForgotPassword = () => {
       console.error('Forgot password error:', error)
       setStatus({
         type: 'error',
-        message: error.response?.data?.message || 'Terjadi kesalahan'
+        message: error.response?.data?.message || 'Terjadi kesalahan saat memproses permintaan'
       })
     } finally {
       setLoading(false)

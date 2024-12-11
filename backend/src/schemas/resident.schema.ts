@@ -1,35 +1,14 @@
 import { z } from 'zod'
 
 export const createResidentSchema = z.object({
-  name: z.string().min(3, 'Nama minimal 3 karakter'),
-  nik: z.string().length(16, 'NIK harus 16 digit'),
-  birthplace: z.string().min(3, 'Tempat lahir minimal 3 karakter'),
-  birthdate: z.string().datetime('Format tanggal lahir tidak valid'),
-  gender: z.enum(['MALE', 'FEMALE'], {
-    errorMap: () => ({ message: 'Gender harus MALE atau FEMALE' })
-  }),
-  address: z.string().min(10, 'Alamat minimal 10 karakter'),
-  phone: z.string().optional(),
-  
-  // Pendidikan
-  education: z.enum(['TK', 'SD', 'SMP', 'SMA', 'KULIAH', 'MAGANG'], {
-    errorMap: () => ({ message: 'Pendidikan tidak valid' })
-  }),
-  schoolName: z.string().min(3, 'Nama sekolah minimal 3 karakter'),
-  grade: z.string().optional(),
-  major: z.string().optional(),
-  
-  // Bantuan
-  assistance: z.enum(['YAYASAN', 'DIAKONIA'], {
-    errorMap: () => ({ message: 'Jenis bantuan tidak valid' })
-  }),
-  details: z.string().optional(),
-  
-  // Relasi
-  roomId: z.number({
-    required_error: 'Room ID harus diisi',
-    invalid_type_error: 'Room ID harus berupa angka'
-  })
+  name: z.string().min(1, 'Name is required'),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(['MALE', 'FEMALE']),
+  address: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  medicalConditions: z.string().optional(),
+  roomId: z.number().optional()
 })
 
 export const updateResidentSchema = createResidentSchema.partial()

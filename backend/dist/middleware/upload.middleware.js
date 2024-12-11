@@ -5,7 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadMiddleware = void 0;
 const multer_1 = __importDefault(require("multer"));
+// Konfigurasi penyimpanan sementara
 const storage = multer_1.default.memoryStorage();
+// Filter file yang diizinkan
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -15,11 +17,11 @@ const fileFilter = (req, file, cb) => {
         cb(new Error('Format file tidak didukung. Gunakan JPG, PNG, atau PDF'));
     }
 };
+// Konfigurasi multer
 exports.uploadMiddleware = (0, multer_1.default)({
     storage,
     fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024
+        fileSize: 5 * 1024 * 1024 // 5MB
     }
 });
-//# sourceMappingURL=upload.middleware.js.map
