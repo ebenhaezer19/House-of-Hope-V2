@@ -1,22 +1,26 @@
 import multer from 'multer'
-import path from 'path'
 
-// Konfigurasi penyimpanan sementara
+// Gunakan memory storage agar bisa akses buffer
 const storage = multer.memoryStorage()
 
-// Filter file yang diizinkan
+// Tambahkan filter untuk tipe file yang diizinkan
 const fileFilter = (req: any, file: Express.Multer.File, cb: Function) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf']
-  
+  const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Format file tidak didukung. Gunakan JPG, PNG, atau PDF'))
+    cb(new Error('Format file tidak didukung'))
   }
 }
 
-// Konfigurasi multer
-export const uploadMiddleware = multer({
+export const upload = multer({
   storage,
   fileFilter,
   limits: {

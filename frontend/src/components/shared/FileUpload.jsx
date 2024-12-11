@@ -4,8 +4,10 @@ import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 const FileUpload = ({
   label,
   accept,
+  multiple = false,
   onChange,
-  error,
+  required = false,
+  help,
   className = ''
 }) => {
   const fileInputRef = useRef(null)
@@ -18,11 +20,9 @@ const FileUpload = ({
         </label>
       )}
       <div 
-        className={`
-          mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed
+        className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed
           rounded-md cursor-pointer hover:border-gray-400 transition-colors
-          ${error ? 'border-red-300' : 'border-gray-300'}
-        `}
+          border-gray-300"
         onClick={() => fileInputRef.current?.click()}
       >
         <div className="space-y-1 text-center">
@@ -35,7 +35,9 @@ const FileUpload = ({
                 type="file"
                 className="sr-only"
                 accept={accept}
+                multiple={multiple}
                 onChange={onChange}
+                required={required}
               />
             </label>
             <p className="pl-1">atau drag and drop</p>
@@ -45,9 +47,7 @@ const FileUpload = ({
           </p>
         </div>
       </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
+      {help && <p className="mt-1 text-sm text-gray-500">{help}</p>}
     </div>
   )
 }

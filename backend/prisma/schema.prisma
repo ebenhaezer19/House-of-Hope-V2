@@ -28,18 +28,12 @@ model Resident {
   gender      Gender
   address     String
   phone       String?
-  
-  // Pendidikan
   education   Education
   schoolName  String
   grade       String?
   major       String?
-  
-  // Bantuan
   assistance  AssistanceType
   details     String?
-  
-  // Relasi
   room        Room     @relation(fields: [roomId], references: [id])
   roomId      Int
   documents   Document[]

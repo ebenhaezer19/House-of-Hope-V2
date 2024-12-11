@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { ResidentController } from '../controllers/resident.controller'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { upload } from '../middleware/upload.middleware'
 
 const router = Router()
 const residentController = new ResidentController()
@@ -15,10 +16,22 @@ router.get('/', residentController.getAllResidents.bind(residentController))
 router.get('/:id', residentController.getResident.bind(residentController))
 
 // POST /api/residents
-router.post('/', residentController.createResident.bind(residentController))
+router.post('/', 
+  upload.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'documents', maxCount: 5 }
+  ]),
+  residentController.createResident.bind(residentController)
+)
 
 // PUT /api/residents/:id
-router.put('/:id', residentController.updateResident.bind(residentController))
+router.put('/:id',
+  upload.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'documents', maxCount: 5 }
+  ]),
+  residentController.updateResident.bind(residentController)
+)
 
 // DELETE /api/residents/:id
 router.delete('/:id', residentController.deleteResident.bind(residentController))

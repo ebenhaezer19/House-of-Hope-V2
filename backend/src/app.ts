@@ -35,6 +35,9 @@ app.get('/', (_req, res) => {
 
 app.use('/api', routes)
 
+// Serve static files
+app.use('/uploads', express.static('uploads'))
+
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({ message: 'Not Found' })

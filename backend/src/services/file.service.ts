@@ -1,32 +1,48 @@
-import multer from 'multer'
 import path from 'path'
-import fs from 'fs'
+import { promises as fs } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
+import { UploadedFile } from '../types/file.types'
 
 export class FileService {
   private uploadDir: string
 
   constructor() {
     this.uploadDir = path.join(__dirname, '../../uploads')
-    if (!fs.existsSync(this.uploadDir)) {
-      fs.mkdirSync(this.uploadDir, { recursive: true })
+    if (!existsSync(this.uploadDir)) {
+      mkdirSync(this.uploadDir, { recursive: true })
     }
   }
 
-  async uploadFile(file: Express.Multer.File) {
+  async uploadFile(file: Express.Multer.File): Promise<UploadedFile> {
     try {
-      const filename = `${Date.now()}-${file.originalname}`
+      if (!file.buffer) {
+        throw new Error('No file buffer provided')
+      }
+
+      const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`
       const filepath = path.join(this.uploadDir, filename)
       
-      await fs.promises.writeFile(filepath, file.buffer)
+      await fs.writeFile(filepath, file.buffer)
       
       return {
         filename,
-        url: `/uploads/${filename}`,
-        mimetype: file.mimetype
+        path: `/uploads/${filename}`,
+        mimetype: file.mimetype,
+        originalname: file.originalname
       }
     } catch (error) {
       console.error('File upload failed:', error)
-      throw error
+      throw new Error('Gagal mengupload file')
+    }
+  }
+
+  async deleteFile(filename: string): Promise<void> {
+    try {
+      const filepath = path.join(this.uploadDir, filename)
+      await fs.unlink(filepath)
+    } catch (error) {
+      console.error('File deletion failed:', error)
+      throw new Error('Gagal menghapus file')
     }
   }
 } 
