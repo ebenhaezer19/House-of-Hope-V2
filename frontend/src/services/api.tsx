@@ -8,6 +8,7 @@ export const api = axios.create({
 // Tambahkan interface untuk response
 interface AuthResponse {
   message: string;
+  // tambahkan field lain jika ada
 }
 
 // Tambahkan token ke requests
@@ -18,6 +19,18 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Tambahkan interceptor untuk menangani error
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 429) {
+      // Tambahkan notifikasi visual jika diperlukan
+      console.warn('Rate limit reached:', error.response.data.message)
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Auth endpoints sebagai named exports
 export const login = (email: string, password: string) => 
@@ -32,7 +45,10 @@ export const updateProfile = (data: any) =>
 export const changePassword = (data: any) =>
   api.post('/auth/change-password', data);
 
-export const resetPassword = (data: { token: string; newPassword: string }) =>
+export const resetPassword = (data: { 
+  token: string; 
+  newPassword: string 
+}): Promise<AuthResponse> => 
   api.post('/auth/reset-password', data);
 
 export const forgotPassword = (data: { email: string }): Promise<AuthResponse> => 

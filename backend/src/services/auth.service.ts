@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { config } from '../config/jwt.config'
 import crypto from 'crypto'
+import { EmailService } from '../services/email.service'
 
 const prisma = new PrismaClient()
 
@@ -85,7 +86,7 @@ export class AuthService {
   async requestPasswordReset(email: string) {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) {
-      throw new Error('Email tidak ditemukan')
+      throw new Error('Email tidak terdaftar')
     }
 
     // Generate reset token
@@ -101,9 +102,11 @@ export class AuthService {
       }
     })
 
-    // TODO: Kirim email dengan reset token
-    // Untuk sementara, return token untuk testing
-    return resetToken
+    // Kirim email
+    const emailService = new EmailService()
+    await emailService.sendResetPasswordEmail(email, resetToken)
+
+    return { message: 'Email reset password telah dikirim' }
   }
 
   async resetPassword(token: string, newPassword: string) {

@@ -51,13 +51,17 @@ export class AuthController {
   async requestPasswordReset(req: Request, res: Response) {
     try {
       const { email } = req.body
-      const resetToken = await authService.requestPasswordReset(email)
-      res.json({ 
-        message: 'Link reset password telah dikirim ke email Anda',
-        // Dalam production, jangan return token
-        token: resetToken 
+      const result = await authService.requestPasswordReset(email)
+      
+      // Log untuk debugging
+      console.log('Reset password request:', {
+        email,
+        result
       })
+      
+      res.json(result)
     } catch (error: any) {
+      console.error('Reset password error:', error)
       res.status(400).json({ message: error.message })
     }
   }

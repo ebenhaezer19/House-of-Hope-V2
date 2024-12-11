@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
@@ -26,12 +26,27 @@ const Login = () => {
     setError('')
     
     try {
-      await login(formData.email, formData.password)
+      const response = await login(formData.email, formData.password)
       navigate('/')
-    } catch (err) {
-      setError(err.response?.data?.message || 'Terjadi kesalahan saat login')
+    } catch (error) {
+      console.error('Login error:', error)
+      
+      // Tampilkan pesan rate limit jika status 429
+      if (error.response?.status === 429) {
+        setError(error.response.data.message || 'Terlalu banyak percobaan. Silakan tunggu beberapa saat')
+        
+        // Nonaktifkan tombol login selama 10 detik
+        setLoading(true)
+        setTimeout(() => {
+          setLoading(false)
+        }, 10000) // 10 detik
+      } else {
+        setError(error.response?.data?.message || 'Email atau password salah')
+      }
     } finally {
-      setLoading(false)
+      if (error?.response?.status !== 429) {
+        setLoading(false)
+      }
     }
   }
 
@@ -142,12 +157,12 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a 
-                  href="#" 
+                <Link
+                  to="/forgot-password"
                   className="font-medium text-indigo-600 hover:text-indigo-500"
                 >
                   Lupa password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -155,9 +170,9 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                {loading ? 'Memproses...' : 'Masuk'}
+                {loading ? 'Mohon tunggu...' : 'Masuk'}
               </button>
             </div>
           </form>

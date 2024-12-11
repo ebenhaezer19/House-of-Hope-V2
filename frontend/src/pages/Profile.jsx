@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserCircleIcon, KeyIcon, BriefcaseIcon, ShieldCheckIcon, UserIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import { changePassword } from '../services/api.tsx'
 
 const Profile = () => {
   const { user: authUser } = useAuth()
@@ -15,6 +16,13 @@ const Profile = () => {
     newPassword: '',
     confirmPassword: ''
   })
+  const [passwords, setPasswords] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (authUser) {
@@ -223,15 +231,102 @@ const Profile = () => {
           </h3>
         </div>
         <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-          <form className="space-y-6">
+          {status.message && (
+            <div className={`mb-4 rounded-md p-4 ${
+              status.type === 'success' ? 'bg-green-50' : 'bg-red-50'
+            }`}>
+              <p className={`text-sm font-medium ${
+                status.type === 'success' ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {status.message}
+              </p>
+            </div>
+          )}
+
+          <form className="space-y-6" onSubmit={async (e) => {
+            e.preventDefault()
+            
+            // Validasi password
+            if (passwords.newPassword !== passwords.confirmPassword) {
+              setStatus({
+                type: 'error',
+                message: 'Password baru dan konfirmasi password tidak sama'
+              })
+              return
+            }
+
+            if (passwords.newPassword.length < 6) {
+              setStatus({
+                type: 'error',
+                message: 'Password minimal 6 karakter'
+              })
+              return
+            }
+
+            setLoading(true)
+            let error = null
+
+            try {
+              const response = await changePassword({
+                oldPassword: passwords.currentPassword,
+                newPassword: passwords.newPassword
+              })
+
+              setStatus({
+                type: 'success',
+                message: response.data.message || 'Password berhasil diubah'
+              })
+
+              // Reset form
+              setPasswords({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+              })
+
+            } catch (err) {
+              error = err
+              console.error('Change password error:', err)
+              
+              // Handle rate limit error
+              if (err.response?.status === 429) {
+                setStatus({
+                  type: 'error',
+                  message: err.response.data.message || 'Terlalu banyak percobaan. Silakan tunggu beberapa saat'
+                })
+                
+                // Nonaktifkan form selama 10 detik
+                setLoading(true)
+                setTimeout(() => {
+                  setLoading(false)
+                }, 10000)
+              } else {
+                setStatus({
+                  type: 'error',
+                  message: err.response?.data?.message || 'Gagal mengubah password'
+                })
+                setLoading(false)
+              }
+            } finally {
+              if (!error || error.response?.status !== 429) {
+                setLoading(false)
+              }
+            }
+          }}>
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Password Lama
               </label>
               <input
                 type="password"
-                name="oldPassword"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+                disabled={loading}
+                value={passwords.currentPassword}
+                onChange={(e) => setPasswords({
+                  ...passwords,
+                  currentPassword: e.target.value
+                })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:opacity-50"
               />
             </div>
             <div>
@@ -240,8 +335,14 @@ const Profile = () => {
               </label>
               <input
                 type="password"
-                name="newPassword"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+                disabled={loading}
+                value={passwords.newPassword}
+                onChange={(e) => setPasswords({
+                  ...passwords,
+                  newPassword: e.target.value
+                })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:opacity-50"
               />
             </div>
             <div>
@@ -250,16 +351,23 @@ const Profile = () => {
               </label>
               <input
                 type="password"
-                name="confirmPassword"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+                disabled={loading}
+                value={passwords.confirmPassword}
+                onChange={(e) => setPasswords({
+                  ...passwords,
+                  confirmPassword: e.target.value
+                })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:opacity-50"
               />
             </div>
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                disabled={loading}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                Update Password
+                {loading ? 'Mohon tunggu...' : 'Update Password'}
               </button>
             </div>
           </form>
