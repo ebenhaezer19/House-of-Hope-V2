@@ -110,27 +110,23 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    // Cari user dengan token yang belum expired
     const user = await prisma.user.findFirst({
       where: {
+        resetToken: token,
         resetTokenExpiry: {
           gt: new Date()
         }
       }
     })
 
-    if (!user || !user.resetToken) {
-      throw new Error('Token tidak valid atau sudah expired')
+    if (!user) {
+      throw new Error('Token tidak valid atau sudah kadaluarsa')
     }
 
-    // Verifikasi token
-    const isValidToken = await bcrypt.compare(token, user.resetToken)
-    if (!isValidToken) {
-      throw new Error('Token tidak valid')
-    }
-
-    // Update password
+    // Hash password baru
     const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+    // Update password dan hapus token reset
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -140,7 +136,7 @@ export class AuthService {
       }
     })
 
-    return { message: 'Password berhasil direset' }
+    return { message: 'Password berhasil diubah' }
   }
 
   async changePassword(userId: number, oldPassword: string, newPassword: string) {

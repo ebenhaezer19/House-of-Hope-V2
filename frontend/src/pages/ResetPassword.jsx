@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { resetPassword } from '../services/api.tsx'
 
@@ -12,15 +12,44 @@ const ResetPassword = () => {
   const [status, setStatus] = useState({ type: '', message: '' })
   const [loading, setLoading] = useState(false)
 
+  // Validasi token saat komponen dimuat
+  useEffect(() => {
+    if (!token) {
+      setStatus({
+        type: 'error',
+        message: 'Token reset password tidak valid'
+      })
+    }
+  }, [token])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+
+    // Validasi token
+    if (!token) {
+      setStatus({
+        type: 'error',
+        message: 'Token reset password tidak valid'
+      })
+      setLoading(false)
+      return
+    }
 
     // Validasi password
     if (newPassword !== confirmPassword) {
       setStatus({
         type: 'error',
         message: 'Password baru dan konfirmasi password tidak sama'
+      })
+      setLoading(false)
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setStatus({
+        type: 'error',
+        message: 'Password minimal 6 karakter'
       })
       setLoading(false)
       return
@@ -47,11 +76,40 @@ const ResetPassword = () => {
       console.error('Reset password error:', error)
       setStatus({
         type: 'error',
-        message: error.response?.data?.message || 'Terjadi kesalahan saat mengubah password'
+        message: error.response?.data?.message || 'Token tidak valid atau sudah kadaluarsa'
       })
     } finally {
       setLoading(false)
     }
+  }
+
+  // Jika tidak ada token, tampilkan pesan error
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="rounded-md bg-red-50 p-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Token reset password tidak valid
+                  </h3>
+                  <div className="mt-4">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm font-medium text-red-800 hover:text-red-700"
+                    >
+                      Kembali ke halaman lupa password
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
