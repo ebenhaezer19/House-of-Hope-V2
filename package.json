@@ -10,5 +10,9 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "recharts": "^2.14.1"
+  }
 }

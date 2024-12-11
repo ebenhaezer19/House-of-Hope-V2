@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoadingSpinner from './components/LoadingSpinner'
 import { AuthProvider } from './contexts/AuthContext'
-import { useAuth } from './contexts/AuthContext'
+import PrivateRoute from './components/PrivateRoute'
 import ResetPassword from './pages/ResetPassword'
 import ForgotPassword from './pages/ForgotPassword'
 
@@ -10,65 +10,44 @@ import ForgotPassword from './pages/ForgotPassword'
 const Login = lazy(() => import('./pages/Login'))
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
-import Residents from './pages/residents/Index'
-import ResidentForm from './pages/residents/Form'
-import Problems from './pages/problems/Index'
-import ProblemForm from './pages/problems/Form'
-import Tasks from './pages/tasks/Index'
-import TaskForm from './pages/tasks/Form'
-import Profile from './pages/Profile'
-import RoomManagement from './pages/rooms/Index'
-import RoomMap from './pages/rooms/Map'
-import PaymentManagement from './pages/payments/Index'
-import FacilityManagement from './pages/facilities/Index'
-import SecurityManagement from './pages/security/Index'
-import MaintenanceManagement from './pages/maintenance/Index'
-import ReportingAnalytics from './pages/reports/Index'
-import InventoryManagement from './pages/inventory/Index'
-import AcademicManagement from './pages/academic/Index'
 
-// Protected Route component
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth()
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    )
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" />
-  }
-  
-  return children
-}
+// Lazy load other components
+const Residents = lazy(() => import('./pages/residents/Index'))
+const ResidentForm = lazy(() => import('./pages/residents/Form'))
+const Problems = lazy(() => import('./pages/problems/Index'))
+const ProblemForm = lazy(() => import('./pages/problems/Form'))
+const Tasks = lazy(() => import('./pages/tasks/Index'))
+const TaskForm = lazy(() => import('./pages/tasks/Form'))
+const RoomManagement = lazy(() => import('./pages/rooms/Index'))
+const RoomMap = lazy(() => import('./pages/rooms/Map'))
+const PaymentManagement = lazy(() => import('./pages/payments/Index'))
+const FacilityManagement = lazy(() => import('./pages/facilities/Index'))
+const SecurityManagement = lazy(() => import('./pages/security/Index'))
+const MaintenanceManagement = lazy(() => import('./pages/maintenance/Index'))
+const ReportingAnalytics = lazy(() => import('./pages/reports/Index'))
+const InventoryManagement = lazy(() => import('./pages/inventory/Index'))
+const AcademicManagement = lazy(() => import('./pages/academic/Index'))
+const Profile = lazy(() => import('./pages/Profile'))
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={
-          <div className="min-h-screen flex items-center justify-center">
-            <LoadingSpinner />
-          </div>
-        }>
+        <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <PrivateRoute>
                 <DashboardLayout />
-              </ProtectedRoute>
+              </PrivateRoute>
             }>
               <Route index element={<Dashboard />} />
               <Route path="profile" element={<Profile />} />
+              
               {/* Penghuni Routes */}
               <Route path="residents" element={<Residents />} />
               <Route path="residents/create" element={<ResidentForm />} />
