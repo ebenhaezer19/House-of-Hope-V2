@@ -1,13 +1,18 @@
 import { Router } from 'express'
-import { dashboardController } from '../controllers/dashboard.controller'
+import { DashboardController } from '../controllers/dashboard.controller'
 import { authenticateToken } from '../middleware/auth.middleware'
 
 const router = Router()
+const dashboardController = new DashboardController()
 
-router.get('/stats', authenticateToken, dashboardController.getStats)
-router.get('/gender', authenticateToken, dashboardController.getGenderDistribution)
-router.get('/education', authenticateToken, dashboardController.getEducationDistribution)
-router.get('/recent-residents', authenticateToken, dashboardController.getRecentResidents)
-router.get('/room-occupancy', authenticateToken, dashboardController.getRoomOccupancy)
+// Protect all dashboard routes
+router.use(authenticateToken)
 
-export default router
+// Dashboard routes
+router.get('/stats', dashboardController.getDashboardStats.bind(dashboardController))
+router.get('/residents-by-gender', dashboardController.getResidentsByGender.bind(dashboardController))
+router.get('/residents-by-education', dashboardController.getResidentsByEducation.bind(dashboardController))
+router.get('/recent-residents', dashboardController.getRecentResidents.bind(dashboardController))
+router.get('/room-occupancy', dashboardController.getRoomOccupancy.bind(dashboardController))
+
+export default router 

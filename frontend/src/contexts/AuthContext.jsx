@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      api.get('/auth/me')
+      api.get('/auth/verify')
         .then(response => {
           setUser(response.data);
         })
@@ -26,11 +26,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user } = response.data;
-    localStorage.setItem('token', token);
-    setUser(user);
-    return user;
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
   };
 
   const logout = () => {
@@ -38,19 +41,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    logout
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

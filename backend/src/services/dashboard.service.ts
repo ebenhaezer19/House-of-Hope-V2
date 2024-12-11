@@ -1,32 +1,20 @@
-import { prisma } from '../lib/prisma'
+import { PrismaClient } from '@prisma/client'
 
-interface GenderCount {
-  gender: string
-  count: number
-}
-
-interface EducationCount {
-  education: string
-  count: number
-}
-
-interface RoomOccupancy {
-  roomNumber: string
-  capacity: number
-  occupied: number
-  available: number
-}
+const prisma = new PrismaClient()
 
 export class DashboardService {
   async getStats() {
-    const totalResidents = await prisma.resident.count()
-    const totalRooms = await prisma.room.count()
-    const maleResidents = await prisma.resident.count({
-      where: { room: { type: 'MALE' } }
-    })
-    const femaleResidents = await prisma.resident.count({
-      where: { room: { type: 'FEMALE' } }
-    })
+    const [
+      totalResidents,
+      totalRooms,
+      maleResidents,
+      femaleResidents
+    ] = await Promise.all([
+      prisma.resident.count(),
+      prisma.room.count(),
+      prisma.resident.count({ where: { gender: 'MALE' } }),
+      prisma.resident.count({ where: { gender: 'FEMALE' } })
+    ])
 
     return {
       totalResidents,
@@ -36,43 +24,50 @@ export class DashboardService {
     }
   }
 
-  async getGenderDistribution(): Promise<GenderCount[]> {
+  async getResidentsByGender() {
     const residents = await prisma.resident.groupBy({
       by: ['gender'],
       _count: true
     })
 
-    return residents.map((item: any) => ({
+    return residents.map(item => ({
       gender: item.gender,
       count: item._count
     }))
   }
 
-  async getEducationDistribution(): Promise<EducationCount[]> {
+  async getResidentsByEducation() {
     const residents = await prisma.resident.groupBy({
       by: ['education'],
       _count: true
     })
 
-    return residents.map((item: any) => ({
+    return residents.map(item => ({
       education: item.education,
       count: item._count
     }))
   }
 
-  async getRecentResidents() {
+  async getRecentResidents(limit = 5) {
     return prisma.resident.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        room: true
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        education: true,
+        gender: true,
+        createdAt: true,
+        room: {
+          select: {
+            number: true
+          }
+        }
       }
     })
   }
 
-  async getRoomOccupancy(): Promise<RoomOccupancy[]> {
+  async getRoomOccupancy() {
     const rooms = await prisma.room.findMany({
       include: {
         _count: {
@@ -81,13 +76,11 @@ export class DashboardService {
       }
     })
 
-    return rooms.map((room: any) => ({
+    return rooms.map(room => ({
       roomNumber: room.number,
       capacity: room.capacity,
       occupied: room._count.residents,
       available: room.capacity - room._count.residents
     }))
   }
-}
-
-export const dashboardService = new DashboardService() 
+} 

@@ -1,8 +1,10 @@
 import { Request, Response } from 'express'
-import { dashboardService } from '../services/dashboard.service'
+import { DashboardService } from '../services/dashboard.service'
+
+const dashboardService = new DashboardService()
 
 export class DashboardController {
-  async getStats(req: Request, res: Response) {
+  async getDashboardStats(req: Request, res: Response) {
     try {
       const stats = await dashboardService.getStats()
       res.json(stats)
@@ -11,19 +13,19 @@ export class DashboardController {
     }
   }
 
-  async getGenderDistribution(req: Request, res: Response) {
+  async getResidentsByGender(req: Request, res: Response) {
     try {
-      const data = await dashboardService.getGenderDistribution()
-      res.json(data)
+      const stats = await dashboardService.getResidentsByGender()
+      res.json(stats)
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }
   }
 
-  async getEducationDistribution(req: Request, res: Response) {
+  async getResidentsByEducation(req: Request, res: Response) {
     try {
-      const data = await dashboardService.getEducationDistribution()
-      res.json(data)
+      const stats = await dashboardService.getResidentsByEducation()
+      res.json(stats)
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }
@@ -40,12 +42,10 @@ export class DashboardController {
 
   async getRoomOccupancy(req: Request, res: Response) {
     try {
-      const data = await dashboardService.getRoomOccupancy()
-      res.json(data)
+      const occupancy = await dashboardService.getRoomOccupancy()
+      res.json(occupancy)
     } catch (error: any) {
       res.status(500).json({ message: error.message })
     }
   }
-}
-
-export const dashboardController = new DashboardController() 
+} 
