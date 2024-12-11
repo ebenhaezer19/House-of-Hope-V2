@@ -23,8 +23,8 @@ model Resident {
   id          Int      @id @default(autoincrement())
   name        String
   nik         String   @unique
-  birthplace  String
-  birthdate   DateTime
+  birthPlace  String
+  birthDate   DateTime
   gender      Gender
   address     String
   phone       String?

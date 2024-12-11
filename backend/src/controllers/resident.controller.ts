@@ -45,8 +45,8 @@ export class ResidentController {
       const data: Prisma.ResidentCreateInput = {
         name: req.body.name,
         nik: req.body.nik,
-        birthplace: req.body.birthplace,
-        birthdate: new Date(req.body.birthdate),
+        birthPlace: req.body.birthPlace,
+        birthDate: new Date(req.body.birthDate),
         gender: req.body.gender,
         address: req.body.address,
         phone: req.body.phone || null,

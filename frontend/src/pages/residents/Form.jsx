@@ -14,8 +14,8 @@ const ResidentForm = () => {
     // Data Pribadi
     name: '',
     nik: '',
-    birthplace: '',
-    birthdate: '',
+    birthPlace: '',
+    birthDate: '',
     gender: '',
     address: '',
     phone: '',
@@ -103,15 +103,15 @@ const ResidentForm = () => {
               />
               <Input
                 label="Tempat Lahir"
-                value={formData.birthplace}
-                onChange={(e) => setFormData(prev => ({...prev, birthplace: e.target.value}))}
+                value={formData.birthPlace}
+                onChange={(e) => setFormData(prev => ({...prev, birthPlace: e.target.value}))}
                 required
               />
               <Input
                 type="date"
                 label="Tanggal Lahir"
-                value={formData.birthdate}
-                onChange={(e) => setFormData(prev => ({...prev, birthdate: e.target.value}))}
+                value={formData.birthDate}
+                onChange={(e) => setFormData(prev => ({...prev, birthDate: e.target.value}))}
                 required
               />
               <Select
