@@ -28,6 +28,7 @@ const ReportingAnalytics = lazy(() => import('./pages/reports/Index'))
 const InventoryManagement = lazy(() => import('./pages/inventory/Index'))
 const AcademicManagement = lazy(() => import('./pages/academic/Index'))
 const Profile = lazy(() => import('./pages/Profile'))
+const Activities = lazy(() => import('./pages/activities/Index'))
 
 function App() {
   return (
@@ -87,6 +88,9 @@ function App() {
               
               {/* Academic Routes */}
               <Route path="academic" element={<AcademicManagement />} />
+              
+              {/* Activities Routes */}
+              <Route path="activities" element={<Activities />} />
             </Route>
           </Routes>
         </Suspense>

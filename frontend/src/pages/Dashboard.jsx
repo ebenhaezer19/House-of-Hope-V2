@@ -1,11 +1,11 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { UserGroupIcon, ExclamationCircleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '../contexts/AuthContext'
 
 const Dashboard = () => {
-  const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalResidents: 100,
     activeProblems: 12,
@@ -24,6 +24,11 @@ const Dashboard = () => {
     ]
   })
 
+  // Handler untuk navigasi
+  const handleNavigation = (path) => {
+    navigate(path)
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -35,6 +40,7 @@ const Dashboard = () => {
           trend="up"
           icon={<UserGroupIcon className="h-6 w-6 text-white" />}
           color="bg-emerald-500"
+          onDetail={() => handleNavigation('/dashboard/residents')}
         />
         <StatCard
           title="Masalah Aktif"
@@ -43,6 +49,7 @@ const Dashboard = () => {
           trend="down"
           icon={<ExclamationCircleIcon className="h-6 w-6 text-white" />}
           color="bg-red-500"
+          onDetail={() => handleNavigation('/dashboard/problems')}
         />
         <StatCard
           title="Tugas Hari Ini"
@@ -51,6 +58,7 @@ const Dashboard = () => {
           trend="up"
           icon={<ClipboardDocumentListIcon className="h-6 w-6 text-white" />}
           color="bg-emerald-500"
+          onDetail={() => handleNavigation('/dashboard/tasks')}
         />
       </div>
 
@@ -78,7 +86,10 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Aktivitas Terbaru</h2>
-            <button className="text-indigo-600 hover:text-indigo-800">
+            <button 
+              onClick={() => handleNavigation('/dashboard/activities')}
+              className="text-indigo-600 hover:text-indigo-800"
+            >
               Lihat Semua
             </button>
           </div>
@@ -110,8 +121,7 @@ const Dashboard = () => {
   )
 }
 
-// StatCard Component
-const StatCard = ({ title, value, change, trend, icon, color }) => (
+const StatCard = ({ title, value, change, trend, icon, color, onDetail }) => (
   <div className="bg-white rounded-lg shadow p-6">
     <div className="flex items-center">
       <div className={`${color} p-3 rounded-lg`}>
@@ -130,7 +140,10 @@ const StatCard = ({ title, value, change, trend, icon, color }) => (
       </div>
     </div>
     <div className="mt-4">
-      <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+      <button
+        onClick={onDetail}
+        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+      >
         Lihat Detail
       </button>
     </div>

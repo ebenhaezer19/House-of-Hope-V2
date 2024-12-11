@@ -1,93 +1,109 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
-import { Link } from 'react-router-dom'
 
 const RoomMap = () => {
-  const [activeFloor, setActiveFloor] = useState(1)
+  const navigate = useNavigate()
   const [selectedRoom, setSelectedRoom] = useState(null)
 
-  // Data dummy untuk denah
-  const floorPlan = {
-    1: [
-      { id: 101, status: 'occupied', position: 'translate-x-0' },
-      { id: 102, status: 'available', position: 'translate-x-32' },
-      { id: 103, status: 'maintenance', position: 'translate-x-64' },
-      // ... tambahkan kamar lainnya
-    ]
-  }
+  // Data kamar
+  const rooms = [
+    { id: 'L1', name: 'Kamar Laki-laki 1', gender: 'male', beds: Array(20).fill().map((_, i) => ({
+      id: `L1-${i+1}`,
+      occupied: Math.random() > 0.5, // Simulasi status ranjang
+      resident: Math.random() > 0.5 ? 'John Doe' : null
+    }))},
+    { id: 'L2', name: 'Kamar Laki-laki 2', gender: 'male', beds: Array(20).fill().map((_, i) => ({
+      id: `L2-${i+1}`,
+      occupied: Math.random() > 0.5,
+      resident: Math.random() > 0.5 ? 'John Doe' : null
+    }))},
+    { id: 'P1', name: 'Kamar Perempuan 1', gender: 'female', beds: Array(20).fill().map((_, i) => ({
+      id: `P1-${i+1}`,
+      occupied: Math.random() > 0.5,
+      resident: Math.random() > 0.5 ? 'Jane Doe' : null
+    }))},
+    { id: 'P2', name: 'Kamar Perempuan 2', gender: 'female', beds: Array(20).fill().map((_, i) => ({
+      id: `P2-${i+1}`,
+      occupied: Math.random() > 0.5,
+      resident: Math.random() > 0.5 ? 'Jane Doe' : null
+    }))}
+  ]
 
   return (
-    <div className="space-y-6">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/rooms"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 p-2 text-white shadow-sm hover:bg-indigo-700"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Denah Kamar</h1>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => navigate('/dashboard/rooms')}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeftIcon className="h-6 w-6 text-gray-600" />
+        </button>
+        <h1 className="text-2xl font-semibold">Peta Kamar</h1>
       </div>
 
-      {/* Floor Selector */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex space-x-4">
-          {[1, 2, 3].map((floor) => (
-            <button
-              key={floor}
-              onClick={() => setActiveFloor(floor)}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                activeFloor === floor
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Lantai {floor}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Floor Plan */}
-      <div className="bg-white shadow rounded-lg p-8">
-        <div className="relative h-[600px] border-2 border-gray-200 rounded-lg">
-          {/* Grid for rooms */}
-          <div className="absolute inset-0 grid grid-cols-4 gap-4 p-4">
-            {floorPlan[activeFloor]?.map((room) => (
-              <div
-                key={room.id}
-                className={`relative p-4 border-2 rounded-lg cursor-pointer transform transition-all duration-200 hover:scale-105 ${
-                  room.status === 'occupied'
-                    ? 'border-green-500 bg-green-50'
-                    : room.status === 'available'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-red-500 bg-red-50'
-                } ${room.position}`}
-                onClick={() => setSelectedRoom(room)}
-              >
-                <div className="text-center">
-                  <span className="text-lg font-bold">Kamar {room.id}</span>
+      {/* Room Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {rooms.map((room) => (
+          <div key={room.id} className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              {room.name}
+            </h2>
+            
+            {/* Bed Grid */}
+            <div className="grid grid-cols-5 gap-2">
+              {room.beds.map((bed) => (
+                <div
+                  key={bed.id}
+                  onClick={() => setSelectedRoom(bed)}
+                  className={`
+                    aspect-square rounded-lg border-2 p-2 cursor-pointer
+                    transition-all duration-200 hover:scale-105
+                    flex items-center justify-center text-sm font-medium
+                    ${bed.occupied 
+                      ? 'border-red-500 bg-red-50 text-red-700'
+                      : 'border-green-500 bg-green-50 text-green-700'
+                    }
+                  `}
+                >
+                  {bed.id.split('-')[1]}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Room Stats */}
+            <div className="mt-4 flex justify-between text-sm text-gray-600">
+              <span>
+                Terisi: {room.beds.filter(b => b.occupied).length} / 20
+              </span>
+              <span>
+                Tersedia: {room.beds.filter(b => !b.occupied).length} ranjang
+              </span>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Room Details Modal */}
+      {/* Bed Detail Modal */}
       {selectedRoom && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Detail Kamar {selectedRoom.id}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              Detail Ranjang {selectedRoom.id}
             </h3>
-            {/* Add room details here */}
-            <div className="mt-4 flex justify-end">
+            <div className="space-y-2">
+              <p>
+                Status: {selectedRoom.occupied ? 'Terisi' : 'Tersedia'}
+              </p>
+              {selectedRoom.occupied && selectedRoom.resident && (
+                <p>Penghuni: {selectedRoom.resident}</p>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
               <button
-                type="button"
-                className="bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 onClick={() => setSelectedRoom(null)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
                 Tutup
               </button>
