@@ -59,23 +59,22 @@ const Residents = () => {
     }
   }
 
-  const getImageUrl = (path) => {
-    if (!path) return '/assets/default-avatar.png'
+  const getImageUrl = (resident) => {
+    // Cari dokumen foto
+    const photoDoc = resident.documents?.find(d => d.type === 'photo')
     
+    if (!photoDoc?.path) {
+      console.log('No photo document found for:', resident.name)
+      return '/assets/default-avatar.png'
+    }
+
     try {
-      // Gunakan baseUrl dari env
       const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'
-      const fullUrl = `${baseUrl}${path}`
-      
-      // Validasi path
-      if (!path.startsWith('/uploads/')) {
-        console.warn('Invalid image path:', path)
-        return '/assets/default-avatar.png'
-      }
+      const fullUrl = `${baseUrl}${photoDoc.path}`
       
       console.log('Image URL:', {
-        path,
-        baseUrl,
+        name: resident.name,
+        path: photoDoc.path,
         fullUrl
       })
       
@@ -145,36 +144,23 @@ const Residents = () => {
                 <tr key={resident.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {resident.documents?.find(d => d.type === 'photo') ? (
-                        <div className="relative h-10 w-10">
-                          {console.log('Resident documents:', {
-                            name: resident.name,
-                            documents: resident.documents,
-                            photoDoc: resident.documents.find(d => d.type === 'photo')
-                          })}
-                          <img
-                            src={getImageUrl(resident.documents.find(d => d.type === 'photo')?.path)}
-                            alt={resident.name}
-                            className="h-full w-full rounded-full object-cover bg-gray-100"
-                            onError={(e) => {
-                              console.error('Image load error:', {
-                                name: resident.name,
-                                path: e.target.src,
-                                error: e.error
-                              })
-                              e.target.onerror = null
-                              e.target.src = '/assets/default-avatar.png'
-                            }}
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-500 text-sm font-medium">
-                            {resident.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      <div className="relative h-10 w-10">
+                        <img
+                          src={getImageUrl(resident)}
+                          alt={resident.name}
+                          className="h-full w-full rounded-full object-cover bg-gray-100"
+                          onError={(e) => {
+                            console.error('Image load error:', {
+                              name: resident.name,
+                              error: e.error,
+                              src: e.target.src
+                            })
+                            e.target.onerror = null
+                            e.target.src = '/assets/default-avatar.png'
+                          }}
+                          loading="lazy"
+                        />
+                      </div>
                       <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">
                           {resident.name}

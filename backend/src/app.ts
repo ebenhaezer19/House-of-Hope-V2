@@ -79,18 +79,38 @@ app.use('/uploads', (req, res, next) => {
 app.use('/uploads', (req, res) => {
   const requestedFile = path.join(uploadsPath, req.path)
   
+  console.log('File request:', {
+    path: req.path,
+    fullPath: requestedFile,
+    exists: fs.existsSync(requestedFile)
+  })
+
   if (!fs.existsSync(requestedFile)) {
     return res.status(404).json({
       error: 'File not found',
-      requestedPath: req.path,
-      availableFiles: files.map((f: string) => f)
+      requestedPath: req.path
     })
   }
 
+  // Get file extension
+  const ext = path.extname(requestedFile).toLowerCase()
+  
+  // Set content type based on extension
+  const contentType = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  }[ext] || 'application/octet-stream'
+
   // Set headers
   res.set({
+    'Content-Type': contentType,
     'Cache-Control': 'public, max-age=31536000',
-    'Content-Type': 'image/jpeg' // Sesuaikan dengan tipe file
+    'Content-Disposition': 'inline'
   })
 
   // Send file
