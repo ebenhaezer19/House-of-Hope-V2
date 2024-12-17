@@ -29,63 +29,32 @@ export class ResidentService {
   }
 
   async create(data: Prisma.ResidentCreateInput): Promise<Resident> {
-    // Validasi data
-    if (!data.name || !data.nik || !data.birthPlace || !data.birthDate || 
-        !data.gender || !data.address || !data.education || !data.schoolName || 
-        !data.assistance || !data.room?.connect?.id) {
-      throw new Error('Data tidak lengkap')
-    }
-
-    // Validasi dan konversi tanggal
-    let birthDate: Date
     try {
-      birthDate = new Date(data.birthDate)
-      if (isNaN(birthDate.getTime())) {
-        throw new Error('Format tanggal lahir tidak valid')
+      // Cek apakah NIK sudah ada
+      const existingResident = await this.prisma.resident.findUnique({
+        where: { nik: data.nik }
+      })
+
+      if (existingResident) {
+        throw new Error('NIK sudah terdaftar')
       }
+
+      // Jika NIK belum ada, lanjutkan create
+      return this.prisma.resident.create({
+        data,
+        include: {
+          room: true,
+          documents: true
+        }
+      })
     } catch (error) {
-      throw new Error('Format tanggal lahir tidak valid')
-    }
-
-    // Validasi room exists
-    const roomId = data.room?.connect?.id
-    if (!roomId) {
-      throw new Error('ID kamar tidak valid')
-    }
-
-    const room = await this.prisma.room.findUnique({
-      where: { id: roomId }
-    })
-
-    if (!room) {
-      throw new Error('Kamar tidak ditemukan')
-    }
-
-    // Validasi room capacity
-    const currentOccupants = await this.prisma.resident.count({
-      where: { roomId: room.id }
-    })
-
-    if (currentOccupants >= room.capacity) {
-      throw new Error('Kamar sudah penuh')
-    }
-
-    // Create resident dengan data yang sudah divalidasi
-    const createData = {
-      ...data,
-      birthDate: birthDate.toISOString(),
-      room: {
-        connect: { id: roomId }
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new Error('NIK sudah terdaftar')
+        }
       }
+      throw error
     }
-
-    return this.prisma.resident.create({
-      data: createData,
-      include: {
-        room: true,
-        documents: true
-      }
-    })
   }
 
   async update(id: number, data: Prisma.ResidentUpdateInput): Promise<Resident> {

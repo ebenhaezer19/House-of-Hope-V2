@@ -19,6 +19,12 @@ const EditResident = () => {
   const [rooms, setRooms] = useState([])
   const [loadingRooms, setLoadingRooms] = useState(true)
   
+  // Tambahkan state untuk files
+  const [files, setFiles] = useState({
+    photo: null,
+    documents: []
+  })
+
   const [formData, setFormData] = useState({
     name: '',
     nik: '',
@@ -27,15 +33,13 @@ const EditResident = () => {
     gender: '',
     address: '',
     phone: '',
-    education: '',
+    education: 'SD',
     schoolName: '',
     grade: '',
     major: '',
-    assistance: '',
+    assistance: 'YAYASAN',
     details: '',
-    roomId: '',
-    photo: null,
-    documents: []
+    roomId: ''
   })
 
   // Fetch resident data
@@ -92,19 +96,63 @@ const EditResident = () => {
     fetchRooms()
   }, [])
 
+  // Handle file changes
+  const handleFileChange = (e) => {
+    const { name, files: uploadedFiles } = e.target
+    
+    console.log('File upload:', {
+      name,
+      files: uploadedFiles,
+      count: uploadedFiles?.length,
+      type: uploadedFiles[0]?.type
+    })
+
+    if (name === 'photo') {
+      if (uploadedFiles[0]) {
+        // Validasi tipe file
+        if (!uploadedFiles[0].type.startsWith('image/')) {
+          setError('File foto harus berupa gambar')
+          return
+        }
+        
+        setFiles(prev => ({
+          ...prev,
+          photo: uploadedFiles[0]
+        }))
+      }
+    } else if (name === 'documents') {
+      // Validasi tipe file
+      const validFiles = Array.from(uploadedFiles).filter(file => {
+        const validTypes = ['.pdf', '.doc', '.docx']
+        return validTypes.some(type => file.name.toLowerCase().endsWith(type))
+      })
+
+      if (validFiles.length !== uploadedFiles.length) {
+        setError('Beberapa file tidak valid. Hanya file PDF dan DOC yang diperbolehkan.')
+        return
+      }
+
+      setFiles(prev => ({
+        ...prev,
+        documents: validFiles
+      }))
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      const formDataToSend = new FormData()
-
-      const dataToSend = {
+      const data = new FormData()
+      
+      // Format data dasar
+      const residentData = {
         name: formData.name,
         nik: formData.nik,
         birthPlace: formData.birthPlace,
-        birthDate: new Date(formData.birthDate + 'T00:00:00Z').toISOString(),
+        birthDate: formData.birthDate ? formData.birthDate : null,
         gender: formData.gender,
         address: formData.address,
         phone: formData.phone || null,
@@ -117,28 +165,52 @@ const EditResident = () => {
         roomId: parseInt(formData.roomId)
       }
 
-      formDataToSend.append('data', JSON.stringify(dataToSend))
+      console.log('Update data:', {
+        id,
+        data: residentData,
+        files
+      })
 
-      if (formData.photo) {
-        formDataToSend.append('photo', formData.photo)
+      // Append data as JSON string
+      data.append('data', JSON.stringify(residentData))
+
+      // Append photo if exists
+      if (files.photo) {
+        console.log('Appending new photo:', files.photo)
+        data.append('photo', files.photo)
       }
 
-      if (formData.documents?.length) {
-        formData.documents.forEach(doc => {
-          formDataToSend.append('documents', doc)
+      // Append documents if exist
+      if (files.documents.length > 0) {
+        console.log('Appending new documents:', files.documents)
+        files.documents.forEach(file => {
+          data.append('documents', file)
         })
       }
 
-      await api.put(`/residents/${id}`, formDataToSend, {
+      // Kirim request
+      const response = await api.put(`/residents/${id}`, data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
 
-      navigate('/dashboard/residents')
+      console.log('Response:', response.data)
+
+      // Show success message
+      alert('Data berhasil diperbarui')
+      
+      // Redirect to residents page
+      navigate('/dashboard/residents', { 
+        state: { message: 'Data penghuni berhasil diperbarui' }
+      })
     } catch (err) {
       console.error('Error updating resident:', err)
-      setError(err.response?.data?.message || 'Terjadi kesalahan saat memperbarui data')
+      setError(
+        err.response?.data?.error || 
+        err.response?.data?.message || 
+        'Terjadi kesalahan saat memperbarui data'
+      )
     } finally {
       setLoading(false)
     }
@@ -292,16 +364,40 @@ const EditResident = () => {
               <FileUpload
                 label="Foto (Opsional)"
                 accept="image/*"
-                onChange={(e) => setFormData(prev => ({...prev, photo: e.target.files[0]}))}
+                onChange={handleFileChange}
+                name="photo"
                 help="Biarkan kosong jika tidak ingin mengubah foto"
+                error={error}
               />
               <FileUpload
                 label="Dokumen Pendukung (Opsional)"
                 accept=".pdf,.doc,.docx"
                 multiple
-                onChange={(e) => setFormData(prev => ({...prev, documents: Array.from(e.target.files)}))}
+                onChange={handleFileChange}
+                name="documents"
                 help="Biarkan kosong jika tidak ingin mengubah dokumen"
+                error={error}
               />
+              
+              {/* Preview foto yang dipilih */}
+              {files.photo && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">Foto yang dipilih:</p>
+                  <p className="text-sm font-medium">{files.photo.name}</p>
+                </div>
+              )}
+              
+              {/* Preview dokumen yang dipilih */}
+              {files.documents.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">Dokumen yang dipilih:</p>
+                  <ul className="list-disc list-inside">
+                    {files.documents.map((doc, index) => (
+                      <li key={index} className="text-sm font-medium">{doc.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 

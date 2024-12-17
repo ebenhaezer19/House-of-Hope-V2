@@ -7,8 +7,11 @@ export class FileService {
   private uploadDir: string
 
   constructor() {
-    this.uploadDir = path.join(__dirname, '../../uploads')
+    this.uploadDir = path.resolve(__dirname, '../../uploads')
+    console.log('Upload directory:', this.uploadDir)
+
     if (!existsSync(this.uploadDir)) {
+      console.log('Creating uploads directory...')
       mkdirSync(this.uploadDir, { recursive: true })
     }
   }
@@ -22,6 +25,7 @@ export class FileService {
       const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`
       const filepath = path.join(this.uploadDir, filename)
       
+      console.log('Saving file to:', filepath)
       await fs.writeFile(filepath, file.buffer)
       
       return {

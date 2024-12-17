@@ -1,53 +1,85 @@
 import { useRef } from 'react'
-import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 
-const FileUpload = ({
-  label,
-  accept,
-  multiple = false,
-  onChange,
+const FileUpload = ({ 
+  label, 
+  name, 
+  accept, 
+  multiple = false, 
   required = false,
+  onChange,
   help,
-  className = ''
+  error
 }) => {
   const fileInputRef = useRef(null)
 
+  const handleClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    const droppedFiles = e.dataTransfer.files
+    
+    // Trigger onChange dengan files yang di-drop
+    const event = {
+      target: {
+        name,
+        files: droppedFiles
+      }
+    }
+    onChange(event)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
   return (
-    <div className={`w-full ${className}`}>
+    <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700">
           {label}
+          {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div 
-        className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed
-          rounded-md cursor-pointer hover:border-gray-400 transition-colors
-          border-gray-300"
-        onClick={() => fileInputRef.current?.click()}
+      
+      <div
+        className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-500 transition-colors cursor-pointer"
+        onClick={handleClick}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
       >
-        <div className="space-y-1 text-center">
-          <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <div className="flex text-sm text-gray-600">
-            <label className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500">
-              <span>Upload file</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="sr-only"
-                accept={accept}
-                multiple={multiple}
-                onChange={onChange}
-                required={required}
-              />
-            </label>
-            <p className="pl-1">atau drag and drop</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          name={name}
+          accept={accept}
+          multiple={multiple}
+          required={required}
+          onChange={onChange}
+          className="hidden"
+        />
+        
+        <div className="text-center">
+          <div className="text-sm text-gray-600">
+            <span className="font-medium text-indigo-600 hover:text-indigo-500">
+              Upload file
+            </span>
+            {" atau drag and drop"}
           </div>
-          <p className="text-xs text-gray-500">
-            PNG, JPG, PDF up to 10MB
+          <p className="text-xs text-gray-500 mt-1">
+            {accept?.split(',').join(', ')} up to 10MB
           </p>
         </div>
       </div>
-      {help && <p className="mt-1 text-sm text-gray-500">{help}</p>}
+
+      {help && (
+        <p className="text-sm text-gray-500">{help}</p>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-600">{error}</p>
+      )}
     </div>
   )
 }

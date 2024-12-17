@@ -45,7 +45,7 @@ model Resident {
   name        String
   nik         String   @unique
   birthPlace  String
-  birthDate   DateTime
+  birthDate   String?
   gender      Gender
   address     String
   phone       String?
@@ -64,7 +64,7 @@ model Resident {
 
 model Document {
   id          Int      @id @default(autoincrement())
-  filename    String
+  name        String
   path        String
   type        String
   resident    Resident @relation(fields: [residentId], references: [id])

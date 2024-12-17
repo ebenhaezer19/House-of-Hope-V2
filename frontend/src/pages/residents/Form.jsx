@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../services/api'
 import {
   Alert,
@@ -17,6 +17,10 @@ const ResidentForm = () => {
   const [error, setError] = useState(null)
   const [rooms, setRooms] = useState([])
   const [loadingRooms, setLoadingRooms] = useState(true)
+  const [files, setFiles] = useState({
+    photo: null,
+    documents: []
+  })
   
   useEffect(() => {
     const fetchRooms = async () => {
@@ -69,20 +73,42 @@ const ResidentForm = () => {
     documents: []
   })
 
+  const handleFileChange = (e) => {
+    const { name, files: uploadedFiles } = e.target
+    
+    console.log('File upload:', {
+      name,
+      files: uploadedFiles,
+      count: uploadedFiles?.length
+    })
+
+    if (name === 'photo') {
+      setFiles(prev => ({
+        ...prev,
+        photo: uploadedFiles[0]
+      }))
+    } else if (name === 'documents') {
+      setFiles(prev => ({
+        ...prev,
+        documents: Array.from(uploadedFiles)
+      }))
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      const formDataToSend = new FormData()
-
+      const data = new FormData()
+      
       // Format data dasar
-      const dataToSend = {
+      const residentData = {
         name: formData.name,
         nik: formData.nik,
         birthPlace: formData.birthPlace,
-        birthDate: new Date(formData.birthDate + 'T00:00:00Z').toISOString(),
+        birthDate: formData.birthDate ? formData.birthDate : null,
         gender: formData.gender,
         address: formData.address,
         phone: formData.phone || null,
@@ -92,42 +118,59 @@ const ResidentForm = () => {
         major: formData.major || null,
         assistance: formData.assistance,
         details: formData.details || null,
-        room: {
-          connect: {
-            id: parseInt(formData.roomId)
-          }
-        }
+        roomId: parseInt(formData.roomId)
       }
 
-      // Log untuk debugging
-      console.log('Data yang akan dikirim:', dataToSend)
+      console.log('Form data:', {
+        original: formData,
+        formatted: residentData,
+        birthDate: {
+          input: formData.birthDate,
+          formatted: residentData.birthDate,
+          type: formData.birthDate ? typeof formData.birthDate : null
+        }
+      })
 
       // Append data as JSON string
-      formDataToSend.append('data', JSON.stringify(dataToSend))
+      data.append('data', JSON.stringify(residentData))
 
       // Append photo if exists
-      if (formData.photo) {
-        formDataToSend.append('photo', formData.photo)
+      if (files.photo) {
+        console.log('Appending photo:', files.photo)
+        data.append('photo', files.photo)
       }
 
       // Append documents if exist
-      if (formData.documents?.length) {
-        formData.documents.forEach(doc => {
-          formDataToSend.append('documents', doc)
+      if (files.documents.length > 0) {
+        console.log('Appending documents:', files.documents)
+        files.documents.forEach(file => {
+          data.append('documents', file)
         })
       }
 
-      const response = await api.post('/residents', formDataToSend, {
+      // Kirim request
+      const response = await api.post('/residents', data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
 
       console.log('Response:', response.data)
-      navigate('/dashboard/residents')
+
+      // Show success message
+      alert('Data berhasil disimpan')
+      
+      // Redirect to residents page
+      navigate('/dashboard/residents', { 
+        state: { message: 'Data penghuni berhasil ditambahkan' }
+      })
     } catch (err) {
-      console.error('Error submitting form:', err)
-      setError(err.response?.data?.message || 'Terjadi kesalahan. Silakan coba lagi.')
+      console.error('Error submitting form:', err.response?.data || err)
+      setError(
+        err.response?.data?.error || 
+        err.response?.data?.message || 
+        'Terjadi kesalahan saat menyimpan data'
+      )
     } finally {
       setLoading(false)
     }
@@ -293,14 +336,16 @@ const ResidentForm = () => {
               <FileUpload
                 label="Foto"
                 accept="image/*"
-                onChange={(e) => setFormData(prev => ({...prev, photo: e.target.files[0]}))}
+                onChange={handleFileChange}
+                name="photo"
                 required
               />
               <FileUpload
                 label="Dokumen Pendukung"
                 accept=".pdf,.doc,.docx"
                 multiple
-                onChange={(e) => setFormData(prev => ({...prev, documents: Array.from(e.target.files)}))}
+                onChange={handleFileChange}
+                name="documents"
                 help="KTP, Kartu Keluarga, dll (PDF/DOC)"
               />
             </div>

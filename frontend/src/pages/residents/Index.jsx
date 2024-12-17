@@ -1,13 +1,25 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import { Alert } from '../../components/shared'
 
 const Residents = () => {
+  const location = useLocation()
+  const [successMessage, setSuccessMessage] = useState(location.state?.message)
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (successMessage) {
+      // Clear message after 5 seconds
+      const timer = setTimeout(() => {
+        setSuccessMessage(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage])
 
   useEffect(() => {
     fetchResidents()
@@ -17,6 +29,7 @@ const Residents = () => {
     try {
       setLoading(true)
       const response = await api.get('/residents')
+      console.log('Response data:', response.data)
       setResidents(response.data)
     } catch (error) {
       console.error('Error fetching residents:', error)
@@ -46,6 +59,33 @@ const Residents = () => {
     }
   }
 
+  const getImageUrl = (path) => {
+    if (!path) return '/assets/default-avatar.png'
+    
+    try {
+      // Gunakan baseUrl dari env
+      const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'
+      const fullUrl = `${baseUrl}${path}`
+      
+      // Validasi path
+      if (!path.startsWith('/uploads/')) {
+        console.warn('Invalid image path:', path)
+        return '/assets/default-avatar.png'
+      }
+      
+      console.log('Image URL:', {
+        path,
+        baseUrl,
+        fullUrl
+      })
+      
+      return fullUrl
+    } catch (error) {
+      console.error('Error generating image URL:', error)
+      return '/assets/default-avatar.png'
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-10">Memuat data...</div>
   }
@@ -62,6 +102,10 @@ const Residents = () => {
           Tambah Penghuni
         </Link>
       </div>
+
+      {successMessage && (
+        <Alert type="success" message={successMessage} />
+      )}
 
       {error && (
         <Alert type="error" message={error} />
@@ -101,14 +145,37 @@ const Residents = () => {
                 <tr key={resident.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {resident.documents?.find(d => d.type === 'photo') && (
-                        <img
-                          src={resident.documents.find(d => d.type === 'photo').path}
-                          alt={resident.name}
-                          className="h-10 w-10 rounded-full mr-3 object-cover"
-                        />
+                      {resident.documents?.find(d => d.type === 'photo') ? (
+                        <div className="relative h-10 w-10">
+                          {console.log('Resident documents:', {
+                            name: resident.name,
+                            documents: resident.documents,
+                            photoDoc: resident.documents.find(d => d.type === 'photo')
+                          })}
+                          <img
+                            src={getImageUrl(resident.documents.find(d => d.type === 'photo')?.path)}
+                            alt={resident.name}
+                            className="h-full w-full rounded-full object-cover bg-gray-100"
+                            onError={(e) => {
+                              console.error('Image load error:', {
+                                name: resident.name,
+                                path: e.target.src,
+                                error: e.error
+                              })
+                              e.target.onerror = null
+                              e.target.src = '/assets/default-avatar.png'
+                            }}
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-gray-500 text-sm font-medium">
+                            {resident.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
-                      <div>
+                      <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">
                           {resident.name}
                         </div>

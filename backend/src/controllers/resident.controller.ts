@@ -11,8 +11,10 @@ export class ResidentController {
   async getAllResidents(req: Request, res: Response) {
     try {
       const result = await residentService.findAll(req.query)
+      console.log('Residents data:', result)
       res.json(result)
     } catch (error: any) {
+      console.error('Error getting residents:', error)
       res.status(500).json({ message: error.message })
     }
   }
