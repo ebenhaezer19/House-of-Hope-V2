@@ -29,11 +29,19 @@ const Residents = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
       try {
+        setLoading(true)
         await api.delete(`/residents/${id}`)
-        fetchResidents() // Refresh data
+        setError(null)
+        // Refresh data setelah berhasil menghapus
+        fetchResidents()
       } catch (error) {
         console.error('Error deleting resident:', error)
-        setError('Gagal menghapus data penghuni')
+        setError(
+          error.response?.data?.message || 
+          'Gagal menghapus data penghuni. Silakan coba lagi.'
+        )
+      } finally {
+        setLoading(false)
       }
     }
   }

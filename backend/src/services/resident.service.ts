@@ -1,6 +1,8 @@
 import { PrismaClient, Resident, Prisma } from '@prisma/client'
+import { FileService } from './file.service'
 
 export class ResidentService {
+  // Deklarasikan prisma sebagai properti private
   private prisma: PrismaClient
 
   constructor() {
@@ -71,7 +73,7 @@ export class ResidentService {
     // Create resident dengan data yang sudah divalidasi
     const createData = {
       ...data,
-      birthDate: birthDate.toISOString(), // Pastikan format tanggal benar
+      birthDate: birthDate.toISOString(),
       room: {
         connect: { id: roomId }
       }
@@ -97,9 +99,55 @@ export class ResidentService {
     })
   }
 
-  async delete(id: number): Promise<Resident> {
-    return this.prisma.resident.delete({
-      where: { id }
-    })
+  async delete(id: number) {
+    try {
+      // Cari resident dan dokumennya
+      const resident = await this.prisma.resident.findUnique({
+        where: { id },
+        include: {
+          documents: true
+        }
+      })
+
+      if (!resident) {
+        throw new Error('Penghuni tidak ditemukan')
+      }
+
+      // Inisialisasi FileService
+      const fileService = new FileService()
+
+      // Hapus file fisik
+      for (const doc of resident.documents) {
+        try {
+          // Ambil nama file dari path
+          const filename = doc.path.split('/').pop()
+          if (filename) {
+            await fileService.deleteFile(filename)
+          }
+        } catch (error) {
+          console.error('Error deleting file:', error)
+          // Lanjutkan proses meski file gagal dihapus
+        }
+      }
+
+      // Hapus data dari database dalam satu transaksi
+      const deleted = await this.prisma.$transaction([
+        // Hapus semua dokumen
+        this.prisma.document.deleteMany({
+          where: { residentId: id }
+        }),
+        // Hapus resident
+        this.prisma.resident.delete({
+          where: { id }
+        })
+      ])
+
+      return deleted[1] // Return deleted resident
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Gagal menghapus data: ${error.message}`)
+      }
+      throw new Error('Gagal menghapus data penghuni')
+    }
   }
 } 

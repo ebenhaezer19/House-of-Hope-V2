@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import ResetPassword from './pages/ResetPassword'
 import ForgotPassword from './pages/ForgotPassword'
+import EditResident from './pages/residents/Edit'
 
 // Lazy load components
 const Login = lazy(() => import('./pages/Login'))
@@ -52,7 +53,7 @@ function App() {
               {/* Penghuni Routes */}
               <Route path="residents" element={<Residents />} />
               <Route path="residents/create" element={<ResidentForm />} />
-              <Route path="residents/:id/edit" element={<ResidentForm />} />
+              <Route path="residents/:id/edit" element={<EditResident />} />
               
               {/* Masalah Routes */}
               <Route path="problems" element={<Problems />} />

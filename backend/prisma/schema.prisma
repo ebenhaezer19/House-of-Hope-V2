@@ -19,6 +19,27 @@ model User {
   updatedAt       DateTime  @updatedAt
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+model Room {
+  id          Int        @id @default(autoincrement())
+  number      String     @unique
+  type        RoomType
+  capacity    Int
+  floor       Int
+  description String?
+  residents   Resident[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum RoomType {
+  WARD
+}
+
 model Resident {
   id          Int      @id @default(autoincrement())
   name        String
@@ -41,22 +62,15 @@ model Resident {
   updatedAt   DateTime @updatedAt
 }
 
-model Room {
-  id          Int        @id @default(autoincrement())
-  number      String     @unique
-  type        RoomType
-  capacity    Int
-  floor       Int?
-  description String?
-  residents   Resident[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-enum Role {
-  ADMIN
-  STAFF
-  USER
+model Document {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  path        String
+  type        String
+  resident    Resident @relation(fields: [residentId], references: [id])
+  residentId  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Gender {
@@ -73,26 +87,9 @@ enum Education {
   MAGANG
 }
 
-enum RoomType {
-  SINGLE
-  DOUBLE
-  WARD
-}
-
 enum AssistanceType {
   YAYASAN
   DIAKONIA
-}
-
-model Document {
-  id          Int      @id @default(autoincrement())
-  filename    String
-  path        String
-  type        String
-  resident    Resident @relation(fields: [residentId], references: [id])
-  residentId  Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 // ... model lainnya 

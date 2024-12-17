@@ -28,7 +28,7 @@ router.post('/',
 router.put('/:id',
   upload.fields([
     { name: 'photo', maxCount: 1 },
-    { name: 'documents', maxCount: 5 }
+    { name: 'documents', maxCount: 10 }
   ]),
   residentController.updateResident.bind(residentController)
 )
