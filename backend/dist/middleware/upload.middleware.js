@@ -17,11 +17,11 @@ const fileFilter = (req, file, cb) => {
         cb(new Error('Format file tidak didukung. Gunakan JPG, PNG, atau PDF'));
     }
 };
-// Konfigurasi multer
+// Konfigurasi multer dengan limit file yang lebih besar
 exports.uploadMiddleware = (0, multer_1.default)({
     storage,
     fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
+        fileSize: 10 * 1024 * 1024 // Menaikkan limit menjadi 10MB
     }
 });

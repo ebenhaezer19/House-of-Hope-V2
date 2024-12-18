@@ -99,16 +99,32 @@ const ResidentForm = () => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-
+    
     try {
-      const data = new FormData()
+      // Validasi ukuran file sebelum upload
+      const maxPhotoSize = 5 * 1024 * 1024; // 5MB
+      const maxDocSize = 10 * 1024 * 1024; // 10MB
       
-      // Format data dasar
+      if (files.photo && files.photo.size > maxPhotoSize) {
+        throw new Error('Ukuran foto terlalu besar. Maksimal 5MB');
+      }
+      
+      if (files.documents) {
+        for (const doc of files.documents) {
+          if (doc.size > maxDocSize) {
+            throw new Error('Ukuran dokumen terlalu besar. Maksimal 10MB');
+          }
+        }
+      }
+
+      const formDataToSend = new FormData()
+      
+      // Format data dasar - PERBAIKAN: Gunakan state formData, bukan formDataToSend
       const residentData = {
         name: formData.name,
         nik: formData.nik,
         birthPlace: formData.birthPlace,
-        birthDate: formData.birthDate ? formData.birthDate : null,
+        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
         gender: formData.gender,
         address: formData.address,
         phone: formData.phone || null,
@@ -118,18 +134,14 @@ const ResidentForm = () => {
         major: formData.major || null,
         assistance: formData.assistance,
         details: formData.details || null,
-        roomId: parseInt(formData.roomId)
+        roomId: formData.roomId ? parseInt(formData.roomId) : null
       }
 
       // Debug log
-      console.log('Submitting documents:', {
-        photo: files.photo,
-        documents: files.documents,
-        documentNames: files.documents.map(f => f.name)
-      })
+      console.log('Sending resident data:', residentData)
 
       // Append data as JSON string
-      data.append('data', JSON.stringify(residentData))
+      formDataToSend.append('data', JSON.stringify(residentData))
 
       // Append photo if exists
       if (files.photo) {
@@ -138,44 +150,56 @@ const ResidentForm = () => {
           type: files.photo.type,
           size: files.photo.size
         })
-        data.append('photo', files.photo)
+        formDataToSend.append('photo', files.photo)
       }
 
       // Append documents if exist
-      if (files.documents.length > 0) {
+      if (files.documents && files.documents.length > 0) {
         console.log('Appending documents:', files.documents.map(f => ({
           name: f.name,
           type: f.type,
           size: f.size
         })))
-        files.documents.forEach((file, index) => {
-          data.append(`documents`, file) // Pastikan nama field sesuai dengan yang diharapkan backend
+        files.documents.forEach(file => {
+          formDataToSend.append('documents', file)
         })
       }
 
-      // Kirim request dengan logging
-      console.log('Sending form data...')
-      const response = await api.post('/residents', data, {
+      // Debug: Log FormData contents
+      for (let pair of formDataToSend.entries()) {
+        console.log('FormData entry:', pair[0], pair[1])
+      }
+
+      // Kirim request
+      const response = await api.post('/residents', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
-      console.log('Response:', response.data)
 
-      // Show success message
-      alert('Data berhasil disimpan')
+      console.log('Response:', response.data)
       
       // Redirect to residents page
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil ditambahkan' }
       })
-    } catch (err) {
-      console.error('Error submitting form:', err.response?.data || err)
-      setError(
-        err.response?.data?.error || 
-        err.response?.data?.message || 
-        'Terjadi kesalahan saat menyimpan data'
-      )
+    } catch (error) {
+      console.error('Error detail:', error)
+      let errorMessage = 'Terjadi kesalahan saat mengirim data'
+      
+      if (error.response) {
+        console.error('Server response:', error.response.data)
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message
+        }
+        if (error.response.status === 413) {
+          errorMessage = 'Ukuran file terlalu besar. Maksimal 10MB'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -344,6 +368,8 @@ const ResidentForm = () => {
                 onChange={handleFileChange}
                 name="photo"
                 required
+                maxSize={5}
+                error={error && error.photo}
               />
               <FileUpload
                 label="Dokumen Pendukung"
@@ -351,7 +377,9 @@ const ResidentForm = () => {
                 multiple
                 onChange={handleFileChange}
                 name="documents"
+                maxSize={10}
                 help="KTP, Kartu Keluarga, dll (PDF/DOC)"
+                error={error && error.documents}
               />
             </div>
           </div>
