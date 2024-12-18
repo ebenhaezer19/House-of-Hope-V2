@@ -1,29 +1,26 @@
-import { createContext, useState, useContext, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import api from '../services/api'
 
-const AuthContext = createContext({})
+const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      verifyToken()
-    } else {
-      setLoading(false)
-    }
+    checkAuth()
   }, [])
 
-  const verifyToken = async () => {
+  const checkAuth = async () => {
     try {
-      const response = await api.get('/auth/verify')
-      setUser(response.data)
+      const token = localStorage.getItem('token')
+      if (token) {
+        const response = await api.get('/api/auth/me')
+        setUser(response.data)
+      }
     } catch (error) {
-      console.error('Token verification failed:', error)
-      logout()
+      console.error('Auth check failed:', error)
+      localStorage.removeItem('token')
     } finally {
       setLoading(false)
     }
@@ -31,31 +28,54 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password })
-      const { token, user } = response.data
-      
+      const response = await api.post('/api/auth/login', {
+        email,
+        password
+      })
+
+      const { token, user: userData } = response.data
       localStorage.setItem('token', token)
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setUser(user)
-      
-      return response.data
+      setUser(userData)
+      return { success: true }
     } catch (error) {
       console.error('Login failed:', error)
-      throw error
+      let message = 'Terjadi kesalahan saat login'
+      
+      if (error.response) {
+        message = error.response.data.message || message
+      } else if (error.request) {
+        message = 'Tidak dapat terhubung ke server'
+      }
+      
+      return {
+        success: false,
+        message
+      }
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
-    delete api.defaults.headers.common['Authorization']
-    setUser(null)
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('token')
+      setUser(null)
+    }
   }
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext) 
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+} 

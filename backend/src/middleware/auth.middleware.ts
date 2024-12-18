@@ -1,42 +1,61 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { config } from '../config/jwt.config'
-import { Role } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
-// Definisikan tipe untuk decoded JWT
-interface JwtPayload {
-  userId: number
-  email: string
-  role: Role
-}
+const prisma = new PrismaClient()
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-// Extend Express Request type
+// Extend Request type to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload
+      user?: any
     }
   }
 }
 
-export const authMiddleware = (
+export const authMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void | Response> => {
   try {
     const authHeader = req.headers.authorization
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Unauthorized - No token provided' })
+    
+    if (!authHeader) {
+      return res.status(401).json({
+        message: 'No token provided'
+      })
     }
 
-    const token = authHeader.split(' ')[1]
-    const decoded = jwt.verify(token, config.secret) as JwtPayload
+    const token = authHeader.split(' ')[1] // Bearer TOKEN
+    
+    if (!token) {
+      return res.status(401).json({
+        message: 'No token provided'
+      })
+    }
 
-    req.user = decoded
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    })
+
+    if (!user) {
+      return res.status(401).json({
+        message: 'User not found'
+      })
+    }
+
+    // Attach user to request object
+    req.user = user
+    
     next()
   } catch (error) {
     console.error('Auth middleware error:', error)
-    return res.status(401).json({ message: 'Unauthorized - Invalid token' })
+    return res.status(401).json({
+      message: 'Invalid token'
+    })
   }
 } 

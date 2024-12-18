@@ -1,41 +1,34 @@
 import path from 'path'
-import { promises as fs } from 'fs'
-import { existsSync, mkdirSync } from 'fs'
+import fs from 'fs'
 import { UploadedFile } from '../types/file.types'
 
 export class FileService {
   private uploadDir: string
 
   constructor() {
-    this.uploadDir = path.resolve(__dirname, '../../uploads')
-    console.log('Upload directory:', this.uploadDir)
-
-    if (!existsSync(this.uploadDir)) {
-      console.log('Creating uploads directory...')
-      mkdirSync(this.uploadDir, { recursive: true })
+    this.uploadDir = path.join(__dirname, '../../uploads')
+    // Ensure upload directory exists
+    if (!fs.existsSync(this.uploadDir)) {
+      fs.mkdirSync(this.uploadDir, { recursive: true })
     }
   }
 
   async uploadFile(file: Express.Multer.File): Promise<UploadedFile> {
     try {
-      if (!file.buffer) {
-        throw new Error('No file buffer provided')
-      }
-
-      const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`
+      const filename = `${Date.now()}-${file.originalname}`
       const filepath = path.join(this.uploadDir, filename)
       
-      console.log('Saving file to:', filepath)
-      await fs.writeFile(filepath, file.buffer)
+      // Write file
+      await fs.promises.writeFile(filepath, file.buffer)
       
       return {
+        originalname: file.originalname,
         filename,
         path: `/uploads/${filename}`,
-        mimetype: file.mimetype,
-        originalname: file.originalname
+        mimetype: file.mimetype
       }
     } catch (error) {
-      console.error('File upload failed:', error)
+      console.error('Error uploading file:', error)
       throw new Error('Gagal mengupload file')
     }
   }
@@ -43,9 +36,11 @@ export class FileService {
   async deleteFile(filename: string): Promise<void> {
     try {
       const filepath = path.join(this.uploadDir, filename)
-      await fs.unlink(filepath)
+      if (fs.existsSync(filepath)) {
+        await fs.promises.unlink(filepath)
+      }
     } catch (error) {
-      console.error('File deletion failed:', error)
+      console.error('Error deleting file:', error)
       throw new Error('Gagal menghapus file')
     }
   }

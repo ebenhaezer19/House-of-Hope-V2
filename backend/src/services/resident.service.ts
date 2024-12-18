@@ -1,122 +1,91 @@
 import { PrismaClient, Resident, Prisma } from '@prisma/client'
-import { FileService } from './file.service'
+
+const prisma = new PrismaClient()
 
 export class ResidentService {
-  // Deklarasikan prisma sebagai properti private
-  private prisma: PrismaClient
-
-  constructor() {
-    this.prisma = new PrismaClient()
-  }
-
-  async findAll(query: any = {}): Promise<Resident[]> {
-    return this.prisma.resident.findMany({
-      include: {
-        room: true,
-        documents: true
-      }
-    })
-  }
-
-  async findOne(id: number): Promise<Resident | null> {
-    return this.prisma.resident.findUnique({
-      where: { id },
-      include: {
-        room: true,
-        documents: true
-      }
-    })
-  }
-
-  async create(data: Prisma.ResidentCreateInput): Promise<Resident> {
+  async findAll(query: any) {
     try {
-      // Cek apakah NIK sudah ada
-      const existingResident = await this.prisma.resident.findUnique({
-        where: { nik: data.nik }
-      })
+      console.log('[Service] findAll called with query:', query);
 
-      if (existingResident) {
-        throw new Error('NIK sudah terdaftar')
-      }
-
-      // Jika NIK belum ada, lanjutkan create
-      return this.prisma.resident.create({
-        data,
+      const residents = await prisma.resident.findMany({
         include: {
-          room: true,
-          documents: true
+          documents: true,
+          room: true
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
       })
+
+      console.log(`[Service] Found ${residents.length} residents`);
+      return residents
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new Error('NIK sudah terdaftar')
-        }
-      }
+      console.error('[Service] Error in findAll:', error)
       throw error
     }
   }
 
-  async update(id: number, data: Prisma.ResidentUpdateInput): Promise<Resident> {
-    return this.prisma.resident.update({
+  async findOne(id: number) {
+    const resident = await prisma.resident.findUnique({
       where: { id },
-      data,
       include: {
-        room: true,
-        documents: true
+        documents: true,
+        room: true
       }
     })
+
+    if (!resident) {
+      throw new Error('Penghuni tidak ditemukan')
+    }
+
+    return resident
+  }
+
+  async create(data: Prisma.ResidentCreateInput) {
+    try {
+      return await prisma.resident.create({
+        data,
+        include: {
+          documents: true,
+          room: true
+        }
+      })
+    } catch (error) {
+      console.error('Error in create:', error)
+      throw error
+    }
+  }
+
+  async update(id: number, data: Prisma.ResidentUpdateInput) {
+    try {
+      return await prisma.resident.update({
+        where: { id },
+        data,
+        include: {
+          documents: true,
+          room: true
+        }
+      })
+    } catch (error) {
+      console.error('Error in update:', error)
+      throw error
+    }
   }
 
   async delete(id: number) {
     try {
-      // Cari resident dan dokumennya
-      const resident = await this.prisma.resident.findUnique({
-        where: { id },
-        include: {
-          documents: true
-        }
+      // Hapus dokumen terkait terlebih dahulu
+      await prisma.document.deleteMany({
+        where: { residentId: id }
       })
 
-      if (!resident) {
-        throw new Error('Penghuni tidak ditemukan')
-      }
-
-      // Inisialisasi FileService
-      const fileService = new FileService()
-
-      // Hapus file fisik
-      for (const doc of resident.documents) {
-        try {
-          // Ambil nama file dari path
-          const filename = doc.path.split('/').pop()
-          if (filename) {
-            await fileService.deleteFile(filename)
-          }
-        } catch (error) {
-          console.error('Error deleting file:', error)
-          // Lanjutkan proses meski file gagal dihapus
-        }
-      }
-
-      // Hapus data dari database dalam satu transaksi
-      const deleted = await this.prisma.$transaction([
-        // Hapus semua dokumen
-        this.prisma.document.deleteMany({
-          where: { residentId: id }
-        }),
-        // Hapus resident
-        this.prisma.resident.delete({
-          where: { id }
-        })
-      ])
-
-      return deleted[1] // Return deleted resident
+      // Kemudian hapus resident
+      return await prisma.resident.delete({
+        where: { id }
+      })
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Gagal menghapus data: ${error.message}`)
-      }
-      throw new Error('Gagal menghapus data penghuni')
+      console.error('Error in delete:', error)
+      throw error
     }
   }
 } 

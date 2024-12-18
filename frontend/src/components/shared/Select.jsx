@@ -1,41 +1,48 @@
 const Select = ({
   label,
+  name,
   value,
   onChange,
   options = [],
   required = false,
+  error,
   disabled = false,
-  placeholder = "Pilih...",
-  className = ''
+  placeholder
 }) => {
   return (
-    <div>
+    <div className="form-control w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label}
+        <label className="label">
+          <span className="label-text">{label}</span>
+          {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <select
+        name={name}
         value={value}
         onChange={onChange}
-        required={required}
+        className={`select select-bordered w-full ${error ? 'select-error' : ''}`}
         disabled={disabled}
-        className={`
-          block w-full rounded-md border-gray-300 shadow-sm
-          focus:border-indigo-500 focus:ring-indigo-500
-          disabled:bg-gray-100 disabled:cursor-not-allowed
-          ${className}
-        `}
       >
-        <option value="">{placeholder}</option>
+        <option value="">{placeholder || `Pilih ${label}`}</option>
         {options.map(option => (
-          <option key={option.value} value={option.value}>
+          <option 
+            key={option.value} 
+            value={option.value}
+            disabled={option.isDisabled}
+            className={option.isDisabled ? 'text-gray-400' : ''}
+          >
             {option.label}
           </option>
         ))}
       </select>
+      {error && (
+        <label className="label">
+          <span className="label-text-alt text-error">{error}</span>
+        </label>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default Select 
+export default Select; 

@@ -10,12 +10,19 @@ const fileService = new FileService()
 export class ResidentController {
   async getAllResidents(req: Request, res: Response) {
     try {
+      console.log('[Controller] getAllResidents called')
+      console.log('Query params:', req.query)
+
       const result = await residentService.findAll(req.query)
-      console.log('Residents data:', result)
-      res.json(result)
+      console.log('[Controller] Residents found:', result)
+      return res.json(result)
     } catch (error: any) {
-      console.error('Error getting residents:', error)
-      res.status(500).json({ message: error.message })
+      console.error('[Controller] Error getting residents:', error)
+      console.error('Stack:', error.stack)
+      return res.status(500).json({ 
+        message: error.message || 'Gagal mengambil data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      })
     }
   }
 

@@ -29,8 +29,8 @@ const Residents = () => {
   const fetchResidents = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/residents')
-      console.log('Response data:', response.data)
+      const response = await api.get('/api/residents')
+      console.log('Response:', response.data)
       setResidents(response.data)
     } catch (error) {
       console.error('Error fetching residents:', error)

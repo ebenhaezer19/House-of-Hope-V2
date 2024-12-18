@@ -1,113 +1,94 @@
-import { Request, Response } from 'express'
-import { AuthService } from '../services/auth.service'
-import { Prisma } from '@prisma/client'
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export class AuthController {
-  private authService: AuthService
-
-  constructor() {
-    this.authService = new AuthService()
-  }
-
-  async register(req: Request, res: Response) {
+  static async login(req: Request, res: Response): Promise<Response> {
     try {
-      const { email, password, name } = req.body
-      const user = await this.authService.register(email, password, name)
-      res.status(201).json(user)
-    } catch (error: any) {
-      res.status(400).json({ message: error.message })
-    }
-  }
+      const { email, password } = req.body;
 
-  async login(req: Request, res: Response) {
-    try {
-      const { email, password } = req.body
-      const result = await this.authService.login(email, password)
-      res.json(result)
-    } catch (error: any) {
-      res.status(401).json({ message: error.message })
-    }
-  }
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
 
-  async getProfile(req: Request, res: Response) {
-    try {
-      if (!req.user?.userId) {
-        return res.status(401).json({ message: 'Unauthorized' })
-      }
-      const user = await this.authService.getProfile(req.user.userId)
-      res.json(user)
-    } catch (error: any) {
-      res.status(400).json({ message: error.message })
-    }
-  }
-
-  async updateProfile(req: Request, res: Response) {
-    try {
-      if (!req.user?.userId) {
-        return res.status(401).json({ message: 'Unauthorized' })
-      }
-      const user = await this.authService.updateProfile(req.user.userId, req.body)
-      res.json(user)
-    } catch (error: any) {
-      res.status(400).json({ message: error.message })
-    }
-  }
-
-  async changePassword(req: Request, res: Response) {
-    try {
-      if (!req.user?.userId) {
-        return res.status(401).json({ message: 'Unauthorized' })
+      if (!user) {
+        return res.status(401).json({
+          message: 'Email atau password salah'
+        });
       }
 
-      const { oldPassword, newPassword } = req.body
-      const result = await this.authService.changePassword(
-        req.user.userId,
-        oldPassword,
-        newPassword
-      )
-      res.json(result)
-    } catch (error: any) {
-      res.status(400).json({ message: error.message })
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          message: 'Email atau password salah'
+        });
+      }
+
+      const token = jwt.sign(
+        { userId: user.id },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      // Hapus password dari response
+      const { password: _, ...userWithoutPassword } = user;
+
+      return res.json({
+        token,
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      return res.status(500).json({
+        message: 'Terjadi kesalahan saat login'
+      });
     }
   }
 
-  async requestPasswordReset(req: Request, res: Response) {
+  static async me(req: Request, res: Response): Promise<Response> {
     try {
-      const { email } = req.body
+      const userId = req.user?.id;
       
-      if (!email) {
-        return res.status(400).json({ message: 'Email harus diisi' })
+      if (!userId) {
+        return res.status(401).json({
+          message: 'Unauthorized'
+        });
       }
 
-      const result = await this.authService.requestPasswordReset(email)
-      res.json(result)
-    } catch (error: any) {
-      res.status(400).json({ 
-        message: error.message || 'Terjadi kesalahan saat memproses permintaan reset password' 
-      })
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          message: 'User tidak ditemukan'
+        });
+      }
+
+      // Hapus password dari response
+      const { password: _, ...userWithoutPassword } = user;
+
+      return res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Get user error:', error);
+      return res.status(500).json({
+        message: 'Terjadi kesalahan saat mengambil data user'
+      });
     }
   }
 
-  async resetPassword(req: Request, res: Response) {
+  static async logout(_req: Request, res: Response): Promise<Response> {
     try {
-      const { token, newPassword } = req.body
-      const result = await this.authService.resetPassword(token, newPassword)
-      res.json(result)
-    } catch (error: any) {
-      res.status(400).json({ message: error.message })
-    }
-  }
-
-  async verifyToken(req: Request, res: Response) {
-    try {
-      if (!req.user?.userId) {
-        return res.status(401).json({ message: 'Unauthorized' })
-      }
-
-      const user = await this.authService.getProfile(req.user.userId)
-      res.json(user)
-    } catch (error: any) {
-      res.status(401).json({ message: error.message })
+      return res.json({ message: 'Berhasil logout' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      return res.status(500).json({
+        message: 'Terjadi kesalahan saat logout'
+      });
     }
   }
 } 

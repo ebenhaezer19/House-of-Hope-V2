@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('Starting seed...');
+
   // Seed admin user
   const hashedPassword = await bcrypt.hash('admin123', 10)
   const admin = await prisma.user.upsert({
@@ -16,6 +18,7 @@ async function main() {
       role: 'ADMIN'
     }
   })
+  console.log('Admin user seeded:', admin);
 
   // Seed rooms
   const rooms = [
@@ -50,31 +53,20 @@ async function main() {
   ]
 
   for (const room of rooms) {
-    await prisma.room.upsert({
+    const createdRoom = await prisma.room.upsert({
       where: { number: room.number },
-      update: {
-        type: room.type,
-        capacity: room.capacity,
-        floor: room.floor,
-        description: room.description
-      },
-      create: {
-        number: room.number,
-        type: room.type,
-        capacity: room.capacity,
-        floor: room.floor,
-        description: room.description
-      }
+      update: room,
+      create: room
     })
+    console.log('Room seeded:', createdRoom);
   }
 
-  console.log({ admin })
-  console.log('Rooms seeded')
+  console.log('Seed completed!');
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    console.error('Error in seed:', e)
     process.exit(1)
   })
   .finally(async () => {

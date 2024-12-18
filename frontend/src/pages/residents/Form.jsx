@@ -17,6 +17,7 @@ const ResidentForm = () => {
   const [error, setError] = useState(null)
   const [rooms, setRooms] = useState([])
   const [loadingRooms, setLoadingRooms] = useState(true)
+  const [roomError, setRoomError] = useState(null)
   const [files, setFiles] = useState({
     photo: null,
     documents: []
@@ -25,25 +26,43 @@ const ResidentForm = () => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        setLoadingRooms(true)
-        const response = await api.get('/rooms')
+        setLoadingRooms(true);
+        setRoomError(null);
         
-        // Filter kamar yang masih tersedia
-        const availableRooms = response.data.filter(room => room.available > 0)
+        const response = await api.get('/api/rooms');
+        console.log('Room data:', response.data);
         
-        setRooms(availableRooms.map(room => ({
+        if (!response.data || response.data.length === 0) {
+          setRoomError('Tidak ada kamar yang tersedia saat ini');
+          setRooms([]);
+          return;
+        }
+        
+        // Transform data untuk select options dengan info ketersediaan
+        const roomOptions = response.data.map(room => ({
           value: room.id.toString(),
-          label: `${room.number} - ${room.gender} (Lantai ${room.floor}) - ${room.available} tempat tersedia`
-        })))
+          label: `${room.number} - Lantai ${room.floor} (${room.availableSpace}/${room.capacity} tempat tersedia)${room.availableSpace === 0 ? ' - PENUH' : ''}`,
+          isDisabled: room.availableSpace === 0  // Disable option jika penuh
+        }));
+
+        setRooms(roomOptions);
+        
+        // Set warning jika semua kamar penuh
+        if (roomOptions.every(room => room.isDisabled)) {
+          setRoomError('Semua kamar sudah penuh');
+        }
+
       } catch (error) {
-        console.error('Error fetching rooms:', error)
-        setError('Gagal mengambil data kamar')
+        console.error('Error fetching rooms:', error);
+        setRoomError('Gagal mengambil data kamar');
+        setRooms([]);
       } finally {
-        setLoadingRooms(false)
+        setLoadingRooms(false);
       }
-    }
-    fetchRooms()
-  }, [])
+    };
+
+    fetchRooms();
+  }, []);
 
   const [formData, setFormData] = useState({
     // Data Pribadi
@@ -95,36 +114,49 @@ const ResidentForm = () => {
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    
-    try {
-      // Validasi ukuran file sebelum upload
-      const maxPhotoSize = 5 * 1024 * 1024; // 5MB
-      const maxDocSize = 10 * 1024 * 1024; // 10MB
-      
-      if (files.photo && files.photo.size > maxPhotoSize) {
-        throw new Error('Ukuran foto terlalu besar. Maksimal 5MB');
-      }
-      
-      if (files.documents) {
-        for (const doc of files.documents) {
-          if (doc.size > maxDocSize) {
-            throw new Error('Ukuran dokumen terlalu besar. Maksimal 10MB');
-          }
-        }
-      }
+  const validateForm = () => {
+    const requiredFields = {
+      name: 'Nama',
+      nik: 'NIK',
+      birthPlace: 'Tempat Lahir',
+      birthDate: 'Tanggal Lahir',
+      gender: 'Jenis Kelamin',
+      address: 'Alamat',
+      education: 'Pendidikan',
+      schoolName: 'Nama Sekolah',
+      assistance: 'Jenis Bantuan',
+      roomId: 'Kamar'
+    };
 
-      const formDataToSend = new FormData()
-      
-      // Format data dasar - PERBAIKAN: Gunakan state formData, bukan formDataToSend
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !formData[key])
+      .map(([_, label]) => label);
+
+    if (missingFields.length > 0) {
+      setError(`Field berikut harus diisi: ${missingFields.join(', ')}`);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Format data untuk dikirim
       const residentData = {
         name: formData.name,
         nik: formData.nik,
         birthPlace: formData.birthPlace,
-        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
+        birthDate: formData.birthDate,
         gender: formData.gender,
         address: formData.address,
         phone: formData.phone || null,
@@ -134,83 +166,62 @@ const ResidentForm = () => {
         major: formData.major || null,
         assistance: formData.assistance,
         details: formData.details || null,
-        roomId: formData.roomId ? parseInt(formData.roomId) : null
-      }
+        roomId: parseInt(formData.roomId)  // Convert to number
+      };
 
-      // Debug log
-      console.log('Sending resident data:', residentData)
+      console.log('Sending data:', residentData);
 
-      // Append data as JSON string
-      formDataToSend.append('data', JSON.stringify(residentData))
-
-      // Append photo if exists
+      // Create FormData for files
+      const formDataToSend = new FormData();
+      formDataToSend.append('data', JSON.stringify(residentData));
+      
+      // Add files if any
       if (files.photo) {
-        console.log('Appending photo:', {
-          name: files.photo.name,
-          type: files.photo.type,
-          size: files.photo.size
-        })
-        formDataToSend.append('photo', files.photo)
+        formDataToSend.append('photo', files.photo);
+      }
+      if (files.documents.length > 0) {
+        files.documents.forEach(doc => {
+          formDataToSend.append('documents', doc);
+        });
       }
 
-      // Append documents if exist
-      if (files.documents && files.documents.length > 0) {
-        console.log('Appending documents:', files.documents.map(f => ({
-          name: f.name,
-          type: f.type,
-          size: f.size
-        })))
-        files.documents.forEach(file => {
-          formDataToSend.append('documents', file)
-        })
-      }
-
-      // Debug: Log FormData contents
-      for (let pair of formDataToSend.entries()) {
-        console.log('FormData entry:', pair[0], pair[1])
-      }
-
-      // Kirim request
-      const response = await api.post('/residents', formDataToSend, {
+      // Send request
+      const response = await api.post('/api/residents', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
-      })
+      });
 
-      console.log('Response:', response.data)
-      
-      // Redirect to residents page
+      console.log('Response:', response.data);
+
+      // Redirect with success message
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil ditambahkan' }
-      })
+      });
+
     } catch (error) {
-      console.error('Error detail:', error)
-      let errorMessage = 'Terjadi kesalahan saat mengirim data'
-      
-      if (error.response) {
-        console.error('Server response:', error.response.data)
-        if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message
+      console.error('Error detail:', error);
+      if (error.response?.data) {
+        console.log('Server response:', error.response.data);
+        if (error.response.data.missingFields) {
+          setError(`Field berikut harus diisi: ${error.response.data.missingFields.join(', ')}`);
+        } else {
+          setError(error.response.data.message || 'Gagal menambahkan data penghuni');
         }
-        if (error.response.status === 413) {
-          errorMessage = 'Ukuran file terlalu besar. Maksimal 10MB'
-        }
-      } else if (error.message) {
-        errorMessage = error.message
+      } else {
+        setError('Gagal menambahkan data penghuni');
       }
-      
-      setError(errorMessage)
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCancel = () => {
     navigate('/dashboard/residents')
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-8">
       {error && (
         <Alert
           type="error"
@@ -345,14 +356,16 @@ const ResidentForm = () => {
                 required
                 disabled={loadingRooms}
                 placeholder={loadingRooms ? "Memuat data kamar..." : "Pilih kamar yang tersedia"}
+                error={roomError}
               />
-              {loadingRooms ? (
-                <p className="text-sm text-gray-500">Sedang memuat data kamar...</p>
-              ) : rooms.length === 0 ? (
-                <p className="text-sm text-red-500">Tidak ada kamar yang tersedia saat ini</p>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Silakan pilih kamar sesuai dengan jenis kelamin penghuni
+              {loadingRooms && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Memuat data kamar...
+                </p>
+              )}
+              {roomError && (
+                <p className="text-sm text-red-500 mt-1">
+                  {roomError}
                 </p>
               )}
             </div>
