@@ -46,14 +46,16 @@ const EditResident = () => {
   useEffect(() => {
     const fetchResident = async () => {
       try {
-        const response = await api.get(`/residents/${id}`)
-        const resident = response.data
+        setLoading(true);
+        const response = await api.get(`/api/residents/${id}`);
         
+        // Transform data untuk form
+        const resident = response.data;
         setFormData({
           name: resident.name,
           nik: resident.nik,
           birthPlace: resident.birthPlace,
-          birthDate: resident.birthDate.split('T')[0],
+          birthDate: resident.birthDate,
           gender: resident.gender,
           address: resident.address,
           phone: resident.phone || '',
@@ -63,38 +65,51 @@ const EditResident = () => {
           major: resident.major || '',
           assistance: resident.assistance,
           details: resident.details || '',
-          roomId: resident.roomId.toString(),
-          photo: null,
-          documents: []
-        })
-      } catch (error) {
-        console.error('Error fetching resident:', error)
-        setError('Gagal mengambil data penghuni')
-      }
-    }
+          roomId: resident.room.id.toString()
+        });
 
-    fetchResident()
+      } catch (error) {
+        console.error('Error fetching resident:', error);
+        setError('Gagal mengambil data penghuni');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResident();
   }, [id])
 
   // Fetch rooms
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        setLoadingRooms(true)
-        const response = await api.get('/rooms')
-        setRooms(response.data.map(room => ({
+        setLoadingRooms(true);
+        const response = await api.get('/api/rooms');
+        
+        // Transform data untuk select options
+        const roomOptions = response.data.map(room => ({
           value: room.id.toString(),
-          label: `${room.number} - ${room.type} (Lantai ${room.floor})`
-        })))
+          label: `${room.number} - Lantai ${room.floor} (${room.availableSpace}/${room.capacity} tempat tersedia)${room.availableSpace === 0 ? ' - PENUH' : ''}`,
+          isDisabled: room.availableSpace === 0  // Disable option jika penuh
+        }));
+
+        setRooms(roomOptions);
+        
+        // Set warning jika semua kamar penuh
+        if (roomOptions.every(room => room.isDisabled)) {
+          setError('Semua kamar sudah penuh');
+        }
+
       } catch (error) {
-        console.error('Error fetching rooms:', error)
-        setError('Gagal mengambil data kamar')
+        console.error('Error fetching rooms:', error);
+        setError('Gagal mengambil data kamar');
       } finally {
-        setLoadingRooms(false)
+        setLoadingRooms(false);
       }
-    }
-    fetchRooms()
-  }, [])
+    };
+
+    fetchRooms();
+  }, []);
 
   // Handle file changes
   const handleFileChange = (e) => {
@@ -140,81 +155,47 @@ const EditResident = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
+    e.preventDefault();
+    
     try {
-      const data = new FormData()
+      setLoading(true);
+      setError(null);
+
+      // Create FormData
+      const formDataToSend = new FormData();
+      formDataToSend.append('data', JSON.stringify(formData));
       
-      // Format data dasar
-      const residentData = {
-        name: formData.name,
-        nik: formData.nik,
-        birthPlace: formData.birthPlace,
-        birthDate: formData.birthDate ? formData.birthDate : null,
-        gender: formData.gender,
-        address: formData.address,
-        phone: formData.phone || null,
-        education: formData.education,
-        schoolName: formData.schoolName,
-        grade: formData.grade || null,
-        major: formData.major || null,
-        assistance: formData.assistance,
-        details: formData.details || null,
-        roomId: parseInt(formData.roomId)
-      }
-
-      console.log('Update data:', {
-        id,
-        data: residentData,
-        files
-      })
-
-      // Append data as JSON string
-      data.append('data', JSON.stringify(residentData))
-
-      // Append photo if exists
+      // Add files if any
       if (files.photo) {
-        console.log('Appending new photo:', files.photo)
-        data.append('photo', files.photo)
+        formDataToSend.append('photo', files.photo);
       }
-
-      // Append documents if exist
       if (files.documents.length > 0) {
-        console.log('Appending new documents:', files.documents)
-        files.documents.forEach(file => {
-          data.append('documents', file)
-        })
+        files.documents.forEach(doc => {
+          formDataToSend.append('documents', doc);
+        });
       }
 
-      // Kirim request
-      const response = await api.put(`/residents/${id}`, data, {
+      // Send request
+      const response = await api.put(`/api/residents/${id}`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
-      })
+      });
 
-      console.log('Response:', response.data)
+      console.log('Response:', response.data);
 
-      // Show success message
-      alert('Data berhasil diperbarui')
-      
-      // Redirect to residents page
+      // Redirect with success message
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil diperbarui' }
-      })
-    } catch (err) {
-      console.error('Error updating resident:', err)
-      setError(
-        err.response?.data?.error || 
-        err.response?.data?.message || 
-        'Terjadi kesalahan saat memperbarui data'
-      )
+      });
+
+    } catch (error) {
+      console.error('Error updating resident:', error);
+      setError(error.response?.data?.message || 'Gagal memperbarui data penghuni');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Render form fields (sama seperti Form.jsx)
   return (

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { PrismaClient, RoomType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -13,15 +13,6 @@ interface FileRequest extends Request {
   files: {
     [key: string]: Express.Multer.File[];
   };
-}
-
-// Definisikan interface untuk data kamar
-interface RoomData {
-  number: string;
-  type: RoomType;
-  capacity: number;
-  floor: number;
-  description: string;
 }
 
 const app = express();
@@ -301,48 +292,6 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
   try {
     console.log('Fetching rooms...');
     
-    // Check if rooms exist
-    const roomCount = await prisma.room.count();
-    console.log('Total rooms in database:', roomCount);
-
-    if (roomCount === 0) {
-      console.log('No rooms found, running seed...');
-      const rooms: RoomData[] = [
-        {
-          number: 'L1',
-          type: RoomType.WARD,
-          capacity: 20,
-          floor: 1,
-          description: 'Kamar Laki-laki 1'
-        },
-        {
-          number: 'L2',
-          type: RoomType.WARD,
-          capacity: 20,
-          floor: 1,
-          description: 'Kamar Laki-laki 2'
-        },
-        {
-          number: 'P1',
-          type: RoomType.WARD,
-          capacity: 20,
-          floor: 2,
-          description: 'Kamar Perempuan 1'
-        },
-        {
-          number: 'P2',
-          type: RoomType.WARD,
-          capacity: 20,
-          floor: 2,
-          description: 'Kamar Perempuan 2'
-        }
-      ];
-
-      for (const room of rooms) {
-        await prisma.room.create({ data: room });
-      }
-    }
-
     const rooms = await prisma.room.findMany({
       include: {
         residents: true,
@@ -351,7 +300,6 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
         }
       }
     });
-    console.log('Found rooms:', JSON.stringify(rooms, null, 2));
 
     // Transform data untuk menambahkan info okupansi
     const roomsWithOccupancy = rooms.map(room => ({
@@ -366,7 +314,6 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
       residents: room.residents
     }));
 
-    console.log('Rooms with occupancy:', JSON.stringify(roomsWithOccupancy, null, 2));
     res.json(roomsWithOccupancy);
   } catch (error) {
     console.error('Error fetching rooms:', error);
@@ -435,6 +382,126 @@ app.use('/uploads', express.static(uploadsDir, {
     }
   }
 }));
+
+// Get single resident
+app.get('/api/residents/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const resident = await prisma.resident.findUnique({
+      where: { id },
+      include: {
+        documents: true,
+        room: true
+      }
+    });
+
+    if (!resident) {
+      res.status(404).json({ message: 'Penghuni tidak ditemukan' });
+      return;
+    }
+
+    res.json(resident);
+  } catch (error) {
+    console.error('Error fetching resident:', error);
+    res.status(500).json({ 
+      message: 'Gagal mengambil data penghuni',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
+
+// Update resident
+app.put('/api/residents/:id', 
+  upload.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'documents', maxCount: 5 }
+  ]) as express.RequestHandler,
+  async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const files = (req as FileRequest).files;
+      const residentData = JSON.parse(req.body.data);
+
+      // Validate resident exists
+      const existingResident = await prisma.resident.findUnique({
+        where: { id },
+        include: { documents: true }
+      });
+
+      if (!existingResident) {
+        res.status(404).json({ message: 'Penghuni tidak ditemukan' });
+        return;
+      }
+
+      // Handle file uploads
+      const documents = [];
+      
+      // Handle photo
+      if (files?.photo) {
+        const photo = files.photo[0];
+        documents.push({
+          name: photo.originalname,
+          path: `/uploads/${photo.filename}`,
+          type: 'photo'
+        });
+      }
+
+      // Handle other documents
+      if (files?.documents) {
+        files.documents.forEach(file => {
+          documents.push({
+            name: file.originalname,
+            path: `/uploads/${file.filename}`,
+            type: 'document'
+          });
+        });
+      }
+
+      // Update resident
+      const updatedResident = await prisma.resident.update({
+        where: { id },
+        data: {
+          name: residentData.name,
+          nik: residentData.nik,
+          birthPlace: residentData.birthPlace,
+          birthDate: residentData.birthDate,
+          gender: residentData.gender,
+          address: residentData.address,
+          phone: residentData.phone || null,
+          education: residentData.education,
+          schoolName: residentData.schoolName,
+          grade: residentData.grade || null,
+          major: residentData.major || null,
+          assistance: residentData.assistance,
+          details: residentData.details || null,
+          room: {
+            connect: { id: parseInt(residentData.roomId) }
+          },
+          // Add new documents if any
+          documents: documents.length > 0 ? {
+            create: documents
+          } : undefined
+        },
+        include: {
+          room: true,
+          documents: true
+        }
+      });
+
+      res.json({
+        message: 'Data penghuni berhasil diperbarui',
+        data: updatedResident
+      });
+
+    } catch (error) {
+      console.error('Error updating resident:', error);
+      res.status(500).json({ 
+        message: 'Gagal memperbarui data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      });
+    }
+  }
+);
 
 // Start server
 const server = app.listen(PORT, () => {
