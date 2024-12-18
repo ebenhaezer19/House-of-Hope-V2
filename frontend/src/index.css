@@ -37,4 +37,11 @@
 
 .rbc-header {
   @apply py-2 font-medium text-gray-700;
+}
+
+.resident-photo {
+  background-color: #f3f4f6;
+  background-image: url('./assets/default-avatar.png');
+  background-size: cover;
+  background-position: center;
 } 

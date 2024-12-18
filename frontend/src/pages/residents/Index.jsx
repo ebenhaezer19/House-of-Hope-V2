@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import { Alert } from '../../components/shared'
+import defaultAvatar from '../../assets/default-avatar.png';
 
 const Residents = () => {
   const location = useLocation()
@@ -60,31 +61,36 @@ const Residents = () => {
     }
   }
 
-  const getImageUrl = (resident) => {
-    // Cari dokumen foto
-    const photoDoc = resident.documents?.find(d => d.type === 'photo')
-    
-    if (!photoDoc?.path) {
-      console.log('No photo document found for:', resident.name)
-      return '/assets/default-avatar.png'
-    }
-
+  const getPhotoUrl = (resident) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'
-      const fullUrl = `${baseUrl}${photoDoc.path}`
+      // Cek jika resident punya foto
+      const photoDoc = resident.documents?.find(doc => doc.type === 'photo');
       
-      console.log('Image URL:', {
-        name: resident.name,
-        path: photoDoc.path,
-        fullUrl
-      })
+      if (photoDoc?.path) {
+        // Jika ada foto, gunakan URL backend
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+        return `${baseUrl}${photoDoc.path}`;
+      }
       
-      return fullUrl
+      // Jika tidak ada foto, gunakan default avatar
+      return defaultAvatar;
     } catch (error) {
-      console.error('Error generating image URL:', error)
-      return '/assets/default-avatar.png'
+      console.error('Error getting photo URL:', error);
+      return defaultAvatar;
     }
-  }
+  };
+
+  const handleImageError = (e, resident) => {
+    console.log('Image load error:', {
+      name: resident.name,
+      error: e.error,
+      src: e.target.src
+    });
+    
+    // Set default avatar jika gambar gagal dimuat
+    e.target.src = defaultAvatar;
+    e.target.onerror = null; // Prevent infinite loop
+  };
 
   const handlePreviewDocument = (path) => {
     try {
@@ -169,18 +175,10 @@ const Residents = () => {
                     <div className="flex items-center">
                       <div className="relative h-10 w-10">
                         <img
-                          src={getImageUrl(resident)}
-                          alt={resident.name}
+                          src={getPhotoUrl(resident)}
+                          alt={`Foto ${resident.name}`}
                           className="h-full w-full rounded-full object-cover bg-gray-100"
-                          onError={(e) => {
-                            console.error('Image load error:', {
-                              name: resident.name,
-                              error: e.error,
-                              src: e.target.src
-                            })
-                            e.target.onerror = null
-                            e.target.src = '/assets/default-avatar.png'
-                          }}
+                          onError={(e) => handleImageError(e, resident)}
                           loading="lazy"
                         />
                       </div>

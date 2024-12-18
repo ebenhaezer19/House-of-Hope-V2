@@ -5,6 +5,8 @@ import { PrismaClient, RoomType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 // Types for multer
 interface FileRequest extends Request {
@@ -410,6 +412,29 @@ app.get('/api/rooms/:id', async (req: Request, res: Response) => {
     });
   }
 });
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static files
+app.use('/uploads', express.static(uploadsDir, {
+  // Set proper headers
+  setHeaders: (res, path) => {
+    // Enable CORS for images
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Set cache control
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    // Set content type for images
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    }
+  }
+}));
 
 // Start server
 const server = app.listen(PORT, () => {

@@ -51,12 +51,14 @@ export class ResidentController {
       const documents: { filename: string; path: string; type: string }[] = []
 
       // Handle photo
+      let photoPath = null;
       if (files.photo && files.photo[0]) {
         try {
           const photo = await fileService.uploadFile(files.photo[0])
+          photoPath = `/uploads/${photo.originalname}`;
           documents.push({
             filename: photo.originalname,
-            path: photo.path,
+            path: photoPath,
             type: 'photo'
           })
         } catch (error) {
