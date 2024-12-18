@@ -121,14 +121,11 @@ const ResidentForm = () => {
         roomId: parseInt(formData.roomId)
       }
 
-      console.log('Form data:', {
-        original: formData,
-        formatted: residentData,
-        birthDate: {
-          input: formData.birthDate,
-          formatted: residentData.birthDate,
-          type: formData.birthDate ? typeof formData.birthDate : null
-        }
+      // Debug log
+      console.log('Submitting documents:', {
+        photo: files.photo,
+        documents: files.documents,
+        documentNames: files.documents.map(f => f.name)
       })
 
       // Append data as JSON string
@@ -136,25 +133,33 @@ const ResidentForm = () => {
 
       // Append photo if exists
       if (files.photo) {
-        console.log('Appending photo:', files.photo)
+        console.log('Appending photo:', {
+          name: files.photo.name,
+          type: files.photo.type,
+          size: files.photo.size
+        })
         data.append('photo', files.photo)
       }
 
       // Append documents if exist
       if (files.documents.length > 0) {
-        console.log('Appending documents:', files.documents)
-        files.documents.forEach(file => {
-          data.append('documents', file)
+        console.log('Appending documents:', files.documents.map(f => ({
+          name: f.name,
+          type: f.type,
+          size: f.size
+        })))
+        files.documents.forEach((file, index) => {
+          data.append(`documents`, file) // Pastikan nama field sesuai dengan yang diharapkan backend
         })
       }
 
-      // Kirim request
+      // Kirim request dengan logging
+      console.log('Sending form data...')
       const response = await api.post('/residents', data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
-
       console.log('Response:', response.data)
 
       // Show success message

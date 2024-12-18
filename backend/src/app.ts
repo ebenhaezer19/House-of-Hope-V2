@@ -32,8 +32,22 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Disposition']
+  exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type']
 }))
+
+// Tambahkan middleware CORS khusus untuk route /uploads
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:5173')
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Type')
+  
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+  next()
+})
 
 // Body parser
 app.use(express.json())
@@ -94,23 +108,18 @@ app.use('/uploads', (req, res) => {
 
   // Get file extension
   const ext = path.extname(requestedFile).toLowerCase()
-  
-  // Set content type based on extension
-  const contentType = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.pdf': 'application/pdf',
-    '.doc': 'application/msword',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  }[ext] || 'application/octet-stream'
 
-  // Set headers
+  // Set content type and disposition
   res.set({
-    'Content-Type': contentType,
-    'Cache-Control': 'public, max-age=31536000',
-    'Content-Disposition': 'inline'
+    'Content-Type': {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif'
+    }[ext] || 'application/octet-stream',
+    'Content-Disposition': ext === '.pdf' ? 'attachment' : 'inline',
+    'Cache-Control': 'public, max-age=31536000'
   })
 
   // Send file
@@ -134,24 +143,53 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now()
-    const filename = `${uniqueSuffix}-${file.originalname}`
-    console.log('Generated filename:', filename)
+    // Sanitasi nama file
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const filename = `${uniqueSuffix}-${sanitizedName}`
+    
+    console.log('Generated filename:', {
+      original: file.originalname,
+      sanitized: sanitizedName,
+      final: filename,
+      mimetype: file.mimetype
+    })
+    
     cb(null, filename)
   }
 })
+
+const allowedMimes = {
+  'image/jpeg': true,
+  'image/png': true,
+  'application/pdf': true,
+  'application/msword': true,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true
+} as const
+
+type AllowedMimeType = keyof typeof allowedMimes
+
+const fileFilter: multer.Options['fileFilter'] = (req, file, cb) => {
+  // Validasi tipe file
+  if (!allowedMimes[file.mimetype as AllowedMimeType]) {
+    cb(new Error('Invalid file type'))
+    return
+  }
+
+  console.log('Uploading file:', {
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    size: file.size
+  })
+  
+  cb(null, true)
+}
 
 const upload = multer({ 
   storage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
-  fileFilter: (req, file, cb) => {
-    console.log('Uploading file:', {
-      originalname: file.originalname,
-      mimetype: file.mimetype
-    })
-    cb(null, true)
-  }
+  fileFilter
 })
 
 // Import prisma client
@@ -166,7 +204,15 @@ app.post('/api/residents', upload.fields([
     // Log files yang diterima
     console.log('Received files:', {
       files: req.files,
-      body: req.body
+      fileDetails: Object.entries(req.files || {}).map(([key, files]: [string, Express.Multer.File[]]) => ({
+        field: key,
+        files: files.map((f: Express.Multer.File) => ({
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+          size: f.size,
+          path: f.path
+        }))
+      }))
     })
 
     // Parse resident data
@@ -175,12 +221,17 @@ app.post('/api/residents', upload.fields([
     // Process files
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
     const photoPath = files?.photo?.[0]?.path
-    const documentPaths = files?.documents?.map(doc => doc.path) || []
+    const documentPaths = files?.documents?.map((doc: Express.Multer.File) => doc.path) || []
 
-    console.log('File paths:', {
-      photo: photoPath,
-      documents: documentPaths,
-      uploadsPath
+    console.log('Processing files:', {
+      photo: photoPath ? {
+        path: photoPath,
+        exists: fs.existsSync(photoPath)
+      } : null,
+      documents: documentPaths.map((path: string) => ({
+        path,
+        exists: fs.existsSync(path)
+      }))
     })
 
     // Create resident with documents
@@ -208,6 +259,11 @@ app.post('/api/residents', upload.fields([
         documents: true,
         room: true
       }
+    })
+
+    console.log('Created resident with documents:', {
+      id: resident.id,
+      documents: resident.documents
     })
 
     // Send success response

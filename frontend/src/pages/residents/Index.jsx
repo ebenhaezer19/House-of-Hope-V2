@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import { Alert } from '../../components/shared'
 
@@ -10,6 +10,7 @@ const Residents = () => {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [downloadingDoc, setDownloadingDoc] = useState(null)
 
   useEffect(() => {
     if (successMessage) {
@@ -85,6 +86,25 @@ const Residents = () => {
     }
   }
 
+  const handlePreviewDocument = (path) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'
+      const fullUrl = `${baseUrl}${path}`
+      
+      console.log('Opening document:', {
+        path,
+        fullUrl
+      })
+
+      // Buka PDF di tab baru
+      window.location.href = fullUrl
+
+    } catch (error) {
+      console.error('Error handling document:', error)
+      alert('Terjadi kesalahan saat membuka dokumen')
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-10">Memuat data...</div>
   }
@@ -133,6 +153,9 @@ const Residents = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Bantuan
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dokumen
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aksi
@@ -195,15 +218,50 @@ const Residents = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">
+                      {resident.documents
+                        .filter(doc => doc.type === 'document')
+                        .map((doc, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setDownloadingDoc(doc.path)
+                              handlePreviewDocument(doc.path)
+                              setTimeout(() => setDownloadingDoc(null), 1000) // Reset setelah 1 detik
+                            }}
+                            className="group relative"
+                            title={doc.name}
+                            disabled={downloadingDoc === doc.path}
+                          >
+                            <DocumentIcon 
+                              className={`h-6 w-6 ${
+                                downloadingDoc === doc.path 
+                                  ? 'text-gray-400 animate-pulse'
+                                  : 'text-gray-500 hover:text-indigo-600'
+                              }`} 
+                            />
+                            <span className="invisible group-hover:visible absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap">
+                              {downloadingDoc === doc.path ? 'Mengunduh...' : doc.name}
+                            </span>
+                          </button>
+                        ))}
+                      {resident.documents.filter(doc => doc.type === 'document').length === 0 && (
+                        <span className="text-gray-400 italic">Tidak ada dokumen</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex space-x-2">
                       <Link
                         to={`/dashboard/residents/${resident.id}/edit`}
                         className="text-indigo-600 hover:text-indigo-900"
+                        title="Edit"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </Link>
                       <button
                         onClick={() => handleDelete(resident.id)}
                         className="text-red-600 hover:text-red-900"
+                        title="Hapus"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>
