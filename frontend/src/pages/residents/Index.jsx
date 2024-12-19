@@ -142,6 +142,16 @@ const ResidentIndex = () => {
     navigate('/dashboard/residents', { replace: true });
   };
 
+  // Tambahkan fungsi untuk memformat tanggal
+  const formatDate = (dateString) => {
+    const options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric'
+    };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  };
+
   if (loading) {
     return <div className="text-center py-10">Memuat data...</div>
   }
@@ -211,6 +221,9 @@ const ResidentIndex = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Dokumen
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tanggal Daftar
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -298,6 +311,9 @@ const ResidentIndex = () => {
                         <span className="text-gray-400 italic">Tidak ada dokumen</span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDate(resident.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
