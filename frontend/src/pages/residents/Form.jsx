@@ -196,13 +196,14 @@ const ResidentForm = () => {
         assistance: formData.assistance,
         details: formData.details || null,
         roomId: parseInt(formData.roomId),
-        status: formData.status,
-        createdAt: new Date().toISOString()
+        status: formData.status
       };
 
-      // Tambahkan exitDate dan alumniNotes hanya jika status ALUMNI
+      // Tambahkan exitDate dan alumniNotes untuk ALUMNI
       if (formData.status === 'ALUMNI') {
-        residentData.exitDate = new Date(formData.exitDate).toISOString();
+        // Format tanggal keluar dengan benar
+        const exitDate = new Date(formData.exitDate);
+        residentData.exitDate = exitDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
         residentData.alumniNotes = formData.alumniNotes;
       }
 

@@ -62,30 +62,26 @@ const Dashboard = () => {
 
   // Fungsi untuk menghitung statistik timeline
   const calculateTimeStats = (residents) => {
-    console.log('Processing residents:', residents.map(r => ({
-      name: r.name,
-      status: r.status,
-      createdAt: r.createdAt,
-      exitDate: r.exitDate
-    })));
-
     // Inisialisasi statistik per bulan
     const monthlyStats = {};
     
-    // Dapatkan rentang waktu
-    const dates = residents.map(r => new Date(r.createdAt));
-    if (residents.filter(r => r.status === 'ALUMNI').length > 0) {
-      // Tambahkan exitDate ke dates untuk alumni
-      const exitDates = residents
-        .filter(r => r.status === 'ALUMNI' && r.exitDate)
-        .map(r => new Date(r.exitDate));
-      dates.push(...exitDates);
-    }
+    // Dapatkan rentang waktu yang mencakup semua data
+    const allDates = [];
     
-    const minDate = dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
+    residents.forEach(resident => {
+      // Tambahkan tanggal masuk
+      allDates.push(new Date(resident.createdAt));
+      
+      // Tambahkan tanggal keluar untuk alumni
+      if (resident.status === 'ALUMNI' && resident.exitDate) {
+        allDates.push(new Date(resident.exitDate));
+      }
+    });
+
+    const minDate = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
     const maxDate = new Date();
-    
-    // Inisialisasi bulan
+
+    // Inisialisasi semua bulan dengan nilai 0
     let currentDate = new Date(minDate);
     while (currentDate <= maxDate) {
       const monthKey = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -107,7 +103,10 @@ const Dashboard = () => {
 
       switch (resident.status) {
         case 'NEW':
-          monthlyStats[startKey].new++;
+          // Penghuni baru dihitung di bulan masuk
+          if (monthlyStats[startKey]) {
+            monthlyStats[startKey].new++;
+          }
           break;
 
         case 'ALUMNI':
@@ -121,27 +120,28 @@ const Dashboard = () => {
               monthlyStats: monthlyStats[exitKey]
             });
 
-            // Pastikan exitKey ada dalam monthlyStats
+            // Tambahkan ke alumni di bulan keluar
             if (monthlyStats[exitKey]) {
               monthlyStats[exitKey].alumni++;
-              
-              // Hitung sebagai aktif dari masuk sampai bulan sebelum keluar
-              let currentDate = new Date(startDate);
-              while (currentDate < exitDate) {
-                const key = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
-                if (monthlyStats[key]) {
-                  monthlyStats[key].active++;
-                }
-                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+
+            // Untuk alumni, tidak perlu dihitung sebagai aktif setelah tanggal keluar
+            let currentDate = new Date(startDate);
+            while (currentDate < exitDate) {
+              const key = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+              if (monthlyStats[key]) {
+                monthlyStats[key].active++;
               }
+              currentDate.setMonth(currentDate.getMonth() + 1);
             }
           }
           break;
 
         case 'ACTIVE':
-          // Hitung sebagai aktif dari masuk sampai sekarang
+          // Hitung sebagai aktif dari bulan masuk sampai sekarang
           let currentDate = new Date(startDate);
-          while (currentDate <= maxDate) {
+          const now = new Date();
+          while (currentDate <= now) {
             const key = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
             if (monthlyStats[key]) {
               monthlyStats[key].active++;
@@ -152,9 +152,7 @@ const Dashboard = () => {
       }
     });
 
-    console.log('Monthly stats before formatting:', monthlyStats);
-
-    // Format hasil
+    // Format hasil dengan urutan bulan yang benar
     const sortedMonths = Object.keys(monthlyStats).sort();
     const result = {
       labels: sortedMonths.map(month => {
@@ -169,6 +167,7 @@ const Dashboard = () => {
       alumni: sortedMonths.map(month => monthlyStats[month].alumni)
     };
 
+    console.log('Monthly stats:', monthlyStats);
     console.log('Final timeline stats:', result);
     return result;
   };
