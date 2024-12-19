@@ -10,6 +10,7 @@ import {
   Textarea,
   FileUpload
 } from '../../components/shared'
+import ImageModal from '../../components/shared/ImageModal'
 
 const EditResident = () => {
   const { id } = useParams()
@@ -45,15 +46,33 @@ const EditResident = () => {
     alumniNotes: ''
   })
 
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
+
+  // Fungsi untuk mendapatkan URL foto
+  const getPhotoUrl = (resident) => {
+    try {
+      const photoDoc = resident.documents?.find(doc => doc.type === 'photo')
+      if (photoDoc?.path) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002'
+        return `${baseUrl}${photoDoc.path}`
+      }
+      return null
+    } catch (error) {
+      console.error('Error getting photo URL:', error)
+      return null
+    }
+  }
+
   // Fetch resident data
   useEffect(() => {
     const fetchResident = async () => {
       try {
-        setLoading(true);
-        const response = await api.get(`/api/residents/${id}`);
+        setLoading(true)
+        const response = await api.get(`/api/residents/${id}`)
+        const resident = response.data
         
         // Transform data untuk form
-        const resident = response.data;
         setFormData({
           name: resident.name,
           nik: resident.nik,
@@ -72,75 +91,69 @@ const EditResident = () => {
           status: resident.status,
           exitDate: resident.exitDate ? new Date(resident.exitDate).toISOString().split('T')[0] : '',
           alumniNotes: resident.alumniNotes || ''
-        });
+        })
+
+        // Set preview image jika ada foto
+        const photoUrl = getPhotoUrl(resident)
+        if (photoUrl) {
+          setPreviewImage(photoUrl)
+        }
 
       } catch (error) {
-        console.error('Error fetching resident:', error);
-        setError('Gagal mengambil data penghuni');
+        console.error('Error fetching resident:', error)
+        setError('Gagal mengambil data penghuni')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchResident();
+    fetchResident()
   }, [id])
 
   // Fetch rooms
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        setLoadingRooms(true);
-        const response = await api.get('/api/rooms');
+        setLoadingRooms(true)
+        const response = await api.get('/api/rooms')
         
         // Transform data untuk select options
         const roomOptions = response.data.map(room => ({
           value: room.id.toString(),
           label: `${room.number} - Lantai ${room.floor} (${room.availableSpace}/${room.capacity} tempat tersedia)${room.availableSpace === 0 ? ' - PENUH' : ''}`,
           isDisabled: room.availableSpace === 0  // Disable option jika penuh
-        }));
+        }))
 
-        setRooms(roomOptions);
+        setRooms(roomOptions)
         
         // Set warning jika semua kamar penuh
         if (roomOptions.every(room => room.isDisabled)) {
-          setError('Semua kamar sudah penuh');
+          setError('Semua kamar sudah penuh')
         }
 
       } catch (error) {
-        console.error('Error fetching rooms:', error);
-        setError('Gagal mengambil data kamar');
+        console.error('Error fetching rooms:', error)
+        setError('Gagal mengambil data kamar')
       } finally {
-        setLoadingRooms(false);
+        setLoadingRooms(false)
       }
-    };
+    }
 
-    fetchRooms();
-  }, []);
+    fetchRooms()
+  }, [])
 
   // Handle file changes
   const handleFileChange = (e) => {
     const { name, files: uploadedFiles } = e.target
     
-    console.log('File upload:', {
-      name,
-      files: uploadedFiles,
-      count: uploadedFiles?.length,
-      type: uploadedFiles[0]?.type
-    })
-
     if (name === 'photo') {
-      if (uploadedFiles[0]) {
-        // Validasi tipe file
-        if (!uploadedFiles[0].type.startsWith('image/')) {
-          setError('File foto harus berupa gambar')
-          return
-        }
-        
-        setFiles(prev => ({
-          ...prev,
-          photo: uploadedFiles[0]
-        }))
-      }
+      const file = uploadedFiles[0]
+      setFiles(prev => ({
+        ...prev,
+        photo: file
+      }))
+      // Create URL for preview
+      setPreviewImage(URL.createObjectURL(file))
     } else if (name === 'documents') {
       // Validasi tipe file
       const validFiles = Array.from(uploadedFiles).filter(file => {
@@ -161,23 +174,23 @@ const EditResident = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
-      const formDataToSend = new FormData();
+      const formDataToSend = new FormData()
       
       // Tambahkan validasi untuk alumni
       if (formData.status === 'ALUMNI') {
         if (!formData.exitDate) {
-          setError('Tanggal keluar harus diisi untuk alumni');
-          return;
+          setError('Tanggal keluar harus diisi untuk alumni')
+          return
         }
         if (!formData.alumniNotes) {
-          setError('Keterangan alumni harus diisi');
-          return;
+          setError('Keterangan alumni harus diisi')
+          return
         }
       }
 
@@ -187,34 +200,34 @@ const EditResident = () => {
         roomId: parseInt(formData.roomId),
         exitDate: formData.status === 'ALUMNI' ? formData.exitDate : null,
         alumniNotes: formData.status === 'ALUMNI' ? formData.alumniNotes : null
-      };
+      }
 
-      formDataToSend.append('data', JSON.stringify(residentData));
+      formDataToSend.append('data', JSON.stringify(residentData))
       
       // Handle file uploads jika ada
       if (files.photo) {
-        formDataToSend.append('photo', files.photo);
+        formDataToSend.append('photo', files.photo)
       }
       
       if (files.documents.length > 0) {
         files.documents.forEach(doc => {
-          formDataToSend.append('documents', doc);
-        });
+          formDataToSend.append('documents', doc)
+        })
       }
 
-      await api.put(`/api/residents/${id}`, formDataToSend);
+      await api.put(`/api/residents/${id}`, formDataToSend)
 
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil diperbarui' }
-      });
+      })
 
     } catch (error) {
-      console.error('Error updating resident:', error);
-      setError(error.response?.data?.message || 'Gagal memperbarui data penghuni');
+      console.error('Error updating resident:', error)
+      setError(error.response?.data?.message || 'Gagal memperbarui data penghuni')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Render form fields (sama seperti Form.jsx)
   return (
@@ -361,14 +374,35 @@ const EditResident = () => {
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900">Dokumen</h3>
             <div className="space-y-4">
-              <FileUpload
-                label="Foto (Opsional)"
-                accept="image/*"
-                onChange={handleFileChange}
-                name="photo"
-                help="Biarkan kosong jika tidak ingin mengubah foto"
-                error={error}
-              />
+              {/* Photo preview and upload */}
+              <div className="space-y-2">
+                {previewImage && (
+                  <div 
+                    className="relative w-32 h-32 mb-4 cursor-pointer"
+                    onClick={() => setShowImageModal(true)}
+                  >
+                    <img
+                      src={previewImage}
+                      alt="Preview"
+                      className="w-full h-full object-cover rounded-lg hover:opacity-75 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <span className="bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                        Klik untuk perbesar
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <FileUpload
+                  label="Foto"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  name="photo"
+                  maxSize={5}
+                  error={error && error.photo}
+                />
+              </div>
+
               <FileUpload
                 label="Dokumen Pendukung (Opsional)"
                 accept=".pdf,.doc,.docx"
@@ -378,14 +412,6 @@ const EditResident = () => {
                 help="Biarkan kosong jika tidak ingin mengubah dokumen"
                 error={error}
               />
-              
-              {/* Preview foto yang dipilih */}
-              {files.photo && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">Foto yang dipilih:</p>
-                  <p className="text-sm font-medium">{files.photo.name}</p>
-                </div>
-              )}
               
               {/* Preview dokumen yang dipilih */}
               {files.documents.length > 0 && (
@@ -409,13 +435,13 @@ const EditResident = () => {
                 label="Status"
                 value={formData.status}
                 onChange={(e) => {
-                  const newStatus = e.target.value;
+                  const newStatus = e.target.value
                   setFormData(prev => ({
                     ...prev, 
                     status: newStatus,
                     exitDate: newStatus === 'ALUMNI' ? prev.exitDate : '',
                     alumniNotes: newStatus === 'ALUMNI' ? prev.alumniNotes : ''
-                  }));
+                  }))
                 }}
                 options={[
                   { value: 'NEW', label: 'Penghuni Baru' },
@@ -475,6 +501,13 @@ const EditResident = () => {
           </div>
         </form>
       </Card>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        imageUrl={previewImage}
+      />
     </div>
   )
 }
