@@ -1,12 +1,9 @@
-import { Router } from 'express'
-import { RoomController } from '../controllers/room.controller'
-import { authMiddleware } from '../middleware/auth.middleware'
+import express from 'express';
+import { RoomController } from '../controllers/room.controller';
 
-const router = Router()
-const roomController = new RoomController()
+const router = express.Router();
+const roomController = new RoomController();
 
-router.use(authMiddleware)
+router.get('/', roomController.getAllRooms);
 
-router.get('/', roomController.getAllRooms)
-
-export default router 
+export default router; 

@@ -22,7 +22,14 @@ export class ResidentController {
           exitDate: true,
           gender: true,
           education: true,
-          assistance: true
+          assistance: true,
+          room: {
+            select: {
+              id: true,
+              number: true,
+              floor: true
+            }
+          }
         }
       });
 

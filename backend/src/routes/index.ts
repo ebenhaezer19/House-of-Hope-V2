@@ -1,6 +1,7 @@
 import express from 'express'
 import authRoutes from './auth.routes'
 import residentRoutes from './resident.routes'
+import roomRoutes from './room.routes'
 
 const router = express.Router()
 
@@ -26,6 +27,7 @@ router.get('/health', (_req, res) => {
 // Mount routes
 router.use('/auth', authRoutes)
 router.use('/residents', residentRoutes)
+router.use('/rooms', roomRoutes)
 
 // Debug endpoint untuk melihat registered routes
 router.get('/debug/routes', (req, res) => {

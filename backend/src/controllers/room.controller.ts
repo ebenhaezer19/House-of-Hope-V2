@@ -6,9 +6,26 @@ const prisma = new PrismaClient()
 export class RoomController {
   async getAllRooms(req: Request, res: Response) {
     try {
+      // Ambil semua kamar dengan data penghuni yang aktif
       const rooms = await prisma.room.findMany({
         include: {
-          residents: true
+          residents: {
+            where: {
+              status: {
+                not: 'ALUMNI' // Hanya ambil yang bukan alumni
+              }
+            },
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              gender: true,
+              createdAt: true
+            },
+            orderBy: {
+              createdAt: 'desc' // Urutkan berdasarkan tanggal masuk
+            }
+          }
         },
         orderBy: [
           { floor: 'asc' },
@@ -16,23 +33,25 @@ export class RoomController {
         ]
       })
 
-      const formattedRooms = rooms.map(room => ({
-        id: room.id,
-        number: room.number,
-        type: room.type,
-        capacity: room.capacity,
-        floor: room.floor,
-        gender: room.number.startsWith('L') ? 'Laki-laki' : 'Perempuan',
-        description: room.description,
-        occupied: room.residents.length,
-        available: room.capacity - room.residents.length,
-        status: room.residents.length < room.capacity ? 'Tersedia' : 'Penuh'
-      }))
+      // Hitung statistik untuk setiap kamar
+      const roomsWithStats = rooms.map(room => {
+        const activeResidents = room.residents.length; // Karena sudah difilter di query
+        return {
+          ...room,
+          availableSpace: room.capacity - activeResidents,
+          occupancy: activeResidents,
+          occupancyRate: (activeResidents / room.capacity) * 100,
+          residents: room.residents.map(resident => ({
+            ...resident,
+            statusLabel: resident.status === 'NEW' ? 'Baru' : 'Aktif'
+          }))
+        }
+      })
 
-      res.json(formattedRooms)
-    } catch (error: any) {
-      console.error('Error getting rooms:', error)
-      res.status(500).json({ message: error.message })
+      res.json(roomsWithStats)
+    } catch (error) {
+      console.error('Error fetching rooms:', error)
+      res.status(500).json({ message: 'Gagal mengambil data kamar' })
     }
   }
 } 

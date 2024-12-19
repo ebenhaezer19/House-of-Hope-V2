@@ -1,162 +1,147 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { PencilIcon, MapIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../services/api';
+import { Card } from '../../components/shared';
 
 const RoomManagement = () => {
-  const [rooms] = useState([
-    { 
-      id: 'L1', 
-      name: 'Kamar Laki-laki 1', 
-      gender: 'male', 
-      capacity: 20,
-      occupied: 12,
-      floor: 1,
-      type: 'WARD'
-    },
-    { 
-      id: 'L2', 
-      name: 'Kamar Laki-laki 2', 
-      gender: 'male', 
-      capacity: 20,
-      occupied: 15,
-      floor: 1,
-      type: 'WARD'
-    },
-    { 
-      id: 'P1', 
-      name: 'Kamar Perempuan 1', 
-      gender: 'female', 
-      capacity: 20,
-      occupied: 18,
-      floor: 2,
-      type: 'WARD'
-    },
-    { 
-      id: 'P2', 
-      name: 'Kamar Perempuan 2', 
-      gender: 'female', 
-      capacity: 20,
-      occupied: 10,
-      floor: 2,
-      type: 'WARD'
-    }
-  ])
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/rooms');
+        setRooms(response.data);
+      } catch (error) {
+        console.error('Error fetching rooms:', error);
+        setError('Gagal memuat data kamar');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Manajemen Kamar</h1>
         <Link
-          to="/dashboard/rooms/map"
-          className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          to="/dashboard/residents"
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
         >
-          <div className="flex items-center">
-            <MapIcon className="h-5 w-5 mr-2" />
-            Peta Kamar
-          </div>
+          Daftar Penghuni
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <select
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          defaultValue=""
-        >
-          <option value="">Semua Lantai</option>
-          <option value="1">Lantai 1</option>
-          <option value="2">Lantai 2</option>
-        </select>
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          {error}
+        </div>
+      )}
 
-        <select
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          defaultValue=""
-        >
-          <option value="">Semua Gender</option>
-          <option value="male">Laki-laki</option>
-          <option value="female">Perempuan</option>
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {rooms.map((room) => (
+          <Card key={room.id} className="relative">
+            {/* Status Badge */}
+            <div className="absolute top-4 right-4">
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                room.availableSpace === 0 
+                  ? 'bg-red-100 text-red-800' 
+                  : room.occupancyRate > 80
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {room.availableSpace === 0 
+                  ? 'Penuh' 
+                  : `${room.availableSpace} tempat tersedia`}
+              </span>
+            </div>
 
-        <input
-          type="text"
-          placeholder="Cari nama kamar..."
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
+            {/* Room Info */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">Kamar {room.number}</h3>
+              </div>
 
-      {/* Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nama Kamar
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Lantai
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Gender
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Kapasitas
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Terisi
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Aksi
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {rooms.map((room) => (
-              <tr key={room.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {room.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {room.floor}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {room.gender === 'male' ? 'Laki-laki' : 'Perempuan'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {room.capacity}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {room.occupied}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    room.occupied < room.capacity
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {room.occupied < room.capacity ? 'Tersedia' : 'Penuh'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-2">
-                    <Link
-                      to={`/dashboard/rooms/${room.id}/edit`}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              {/* Capacity Info */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Kapasitas:</span>
+                  <span className="font-medium">{room.capacity} orang</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Terisi:</span>
+                  <span className="font-medium">{room.occupancy} orang</span>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${
+                      room.occupancyRate >= 90 
+                        ? 'bg-red-500'
+                        : room.occupancyRate >= 70
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${room.occupancyRate}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Residents List */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">Penghuni ({room.residents.length}):</h4>
+                {room.residents.length > 0 ? (
+                  <ul className="space-y-1 max-h-40 overflow-y-auto">
+                    {room.residents.map(resident => (
+                      <li 
+                        key={resident.id}
+                        className="text-sm flex justify-between items-center p-1 hover:bg-gray-50 rounded"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{resident.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(resident.createdAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          resident.status === 'NEW' 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-indigo-100 text-indigo-800'
+                        }`}>
+                          {resident.statusLabel}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">
+                    Belum ada penghuni
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Tambahkan loading state */}
+            {loading && (
+              <div className="flex justify-center items-center h-40">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            )}
+          </Card>
+        ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default RoomManagement 
+export default RoomManagement; 
