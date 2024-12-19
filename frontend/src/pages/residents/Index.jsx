@@ -12,6 +12,8 @@ const Residents = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [downloadingDoc, setDownloadingDoc] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     if (successMessage) {
@@ -42,24 +44,29 @@ const Residents = () => {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      try {
-        setLoading(true)
-        await api.delete(`/residents/${id}`)
-        setError(null)
-        // Refresh data setelah berhasil menghapus
-        fetchResidents()
-      } catch (error) {
-        console.error('Error deleting resident:', error)
-        setError(
-          error.response?.data?.message || 
-          'Gagal menghapus data penghuni. Silakan coba lagi.'
-        )
-      } finally {
-        setLoading(false)
-      }
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      return;
     }
-  }
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+
+      // Pastikan URL endpoint benar
+      await api.delete(`/api/residents/${id}`);
+      
+      // Refresh data setelah hapus berhasil
+      await fetchResidents();
+      
+      setSuccessMessage('Data penghuni berhasil dihapus');
+
+    } catch (error) {
+      console.error('Error deleting resident:', error);
+      setError(error.response?.data?.message || 'Gagal menghapus data penghuni');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const getPhotoUrl = (resident) => {
     try {
@@ -258,10 +265,15 @@ const Residents = () => {
                       </Link>
                       <button
                         onClick={() => handleDelete(resident.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className={`text-red-600 hover:text-red-900 ${
+                          deleteLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={deleteLoading}
                         title="Hapus"
                       >
-                        <TrashIcon className="h-5 w-5" />
+                        <TrashIcon className={`h-5 w-5 ${
+                          deleteLoading ? 'animate-pulse' : ''
+                        }`} />
                       </button>
                     </div>
                   </td>

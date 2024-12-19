@@ -20,45 +20,46 @@ async function main() {
   })
   console.log('Admin user seeded:', admin);
 
-  // Seed rooms
-  const rooms = [
-    {
-      number: 'L1',
-      type: 'WARD' as RoomType,
-      capacity: 20,
-      floor: 1,
-      description: 'Kamar Laki-laki 1'
-    },
-    {
-      number: 'L2',
-      type: 'WARD' as RoomType,
-      capacity: 20,
-      floor: 1,
-      description: 'Kamar Laki-laki 2'
-    },
-    {
-      number: 'P1',
-      type: 'WARD' as RoomType,
-      capacity: 20,
-      floor: 2,
-      description: 'Kamar Perempuan 1'
-    },
-    {
-      number: 'P2',
-      type: 'WARD' as RoomType,
-      capacity: 20,
-      floor: 2,
-      description: 'Kamar Perempuan 2'
-    }
-  ]
+  // Seed rooms if none exist
+  const roomCount = await prisma.room.count();
+  
+  if (roomCount === 0) {
+    const rooms = [
+      {
+        number: 'L1',
+        type: RoomType.WARD,
+        capacity: 20,
+        floor: 1,
+        description: 'Kamar Laki-laki 1'
+      },
+      {
+        number: 'L2',
+        type: RoomType.WARD,
+        capacity: 20,
+        floor: 1,
+        description: 'Kamar Laki-laki 2'
+      },
+      {
+        number: 'P1',
+        type: RoomType.WARD,
+        capacity: 20,
+        floor: 2,
+        description: 'Kamar Perempuan 1'
+      },
+      {
+        number: 'P2',
+        type: RoomType.WARD,
+        capacity: 20,
+        floor: 2,
+        description: 'Kamar Perempuan 2'
+      }
+    ];
 
-  for (const room of rooms) {
-    const createdRoom = await prisma.room.upsert({
-      where: { number: room.number },
-      update: room,
-      create: room
-    })
-    console.log('Room seeded:', createdRoom);
+    for (const room of rooms) {
+      await prisma.room.create({ data: room });
+    }
+    
+    console.log('Rooms seeded successfully');
   }
 
   console.log('Seed completed!');

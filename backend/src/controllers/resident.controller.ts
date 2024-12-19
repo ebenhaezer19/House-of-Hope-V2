@@ -10,19 +10,36 @@ const fileService = new FileService()
 export class ResidentController {
   async getAllResidents(req: Request, res: Response) {
     try {
-      console.log('[Controller] getAllResidents called')
-      console.log('Query params:', req.query)
+      const residents = await prisma.resident.findMany({
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          exitDate: true,
+          createdAt: true,
+          gender: true,
+          education: true,
+          assistance: true,
+          documents: true,
+          room: true
+        }
+      });
 
-      const result = await residentService.findAll(req.query)
-      console.log('[Controller] Residents found:', result)
-      return res.json(result)
-    } catch (error: any) {
-      console.error('[Controller] Error getting residents:', error)
-      console.error('Stack:', error.stack)
-      return res.status(500).json({ 
-        message: error.message || 'Gagal mengambil data penghuni',
+      // Debug log untuk memeriksa data
+      console.log('Residents data:', residents.map(r => ({
+        name: r.name,
+        status: r.status,
+        createdAt: r.createdAt,
+        exitDate: r.exitDate
+      })));
+
+      res.json(residents);
+    } catch (error) {
+      console.error('Error fetching residents:', error);
+      res.status(500).json({ 
+        message: 'Gagal mengambil data penghuni',
         error: process.env.NODE_ENV === 'development' ? error : undefined
-      })
+      });
     }
   }
 
@@ -38,73 +55,43 @@ export class ResidentController {
 
   async createResident(req: Request, res: Response) {
     try {
-      // Parse data JSON
-      let data
-      try {
-        data = JSON.parse(req.body.data)
-      } catch (e) {
-        throw new Error('Format data tidak valid')
-      }
-
-      // Get uploaded files
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-      const documents: { filename: string; path: string; type: string }[] = []
-
-      // Handle photo
-      let photoPath = null;
-      if (files.photo && files.photo[0]) {
-        try {
-          const photo = await fileService.uploadFile(files.photo[0])
-          photoPath = `/uploads/${photo.originalname}`;
-          documents.push({
-            filename: photo.originalname,
-            path: photoPath,
-            type: 'photo'
-          })
-        } catch (error) {
-          console.error('Error uploading photo:', error)
-          throw new Error('Gagal mengupload foto')
-        }
-      }
-
-      // Handle documents
-      if (files.documents) {
-        for (const file of files.documents) {
-          try {
-            const uploaded = await fileService.uploadFile(file)
-            documents.push({
-              filename: uploaded.originalname,
-              path: uploaded.path,
-              type: 'document'
-            })
-          } catch (error) {
-            console.error('Error uploading document:', error)
-            throw new Error('Gagal mengupload dokumen')
-          }
-        }
-      }
-
-      // Validate required fields
-      if (!data.name || !data.nik || !data.birthPlace || !data.birthDate || 
-          !data.gender || !data.address || !data.education || !data.schoolName || 
-          !data.assistance || !data.room?.connect?.id) {
-        throw new Error('Data tidak lengkap')
-      }
-
-      // Create resident with documents
-      const resident = await residentService.create({
+      let data = JSON.parse(req.body.data);
+      
+      // Pastikan status dan exitDate diproses dengan benar
+      const residentData = {
         ...data,
-        documents: {
-          create: documents
-        }
-      })
+        roomId: parseInt(data.roomId),
+        status: data.status || 'ACTIVE',
+        // Konversi exitDate ke Date jika ada
+        exitDate: data.status === 'ALUMNI' && data.exitDate ? new Date(data.exitDate) : null,
+        alumniNotes: data.status === 'ALUMNI' ? data.alumniNotes : null
+      };
 
-      res.status(201).json(resident)
-    } catch (error: any) {
-      console.error('Error creating resident:', error)
+      console.log('Creating resident with data:', residentData);
+
+      const resident = await prisma.resident.create({
+        data: {
+          ...residentData,
+          room: {
+            connect: { id: residentData.roomId }
+          },
+          documents: {
+            create: documents
+          }
+        },
+        include: {
+          room: true,
+          documents: true
+        }
+      });
+
+      res.status(201).json(resident);
+    } catch (error) {
+      console.error('Error creating resident:', error);
       res.status(400).json({ 
-        message: error.message || 'Gagal membuat data penghuni'
-      })
+        message: error.message || 'Gagal membuat data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   }
 
@@ -130,20 +117,42 @@ export class ResidentController {
 
   async deleteResident(req: Request, res: Response) {
     try {
-      const id = Number(req.params.id)
+      const id = parseInt(req.params.id);
       
-      // Validasi ID
       if (isNaN(id)) {
-        return res.status(400).json({ message: 'ID tidak valid' })
+        return res.status(400).json({ message: 'ID tidak valid' });
       }
 
-      const resident = await residentService.delete(id)
-      res.json({ message: 'Data penghuni berhasil dihapus', data: resident })
-    } catch (error: any) {
-      console.error('Error deleting resident:', error)
+      // Cek apakah resident ada
+      const resident = await prisma.resident.findUnique({
+        where: { id }
+      });
+
+      if (!resident) {
+        return res.status(404).json({ message: 'Data penghuni tidak ditemukan' });
+      }
+
+      // Hapus dokumen terkait terlebih dahulu
+      await prisma.document.deleteMany({
+        where: { residentId: id }
+      });
+
+      // Hapus data penghuni
+      await prisma.resident.delete({
+        where: { id }
+      });
+
+      res.json({ 
+        message: 'Data penghuni berhasil dihapus',
+        deletedId: id 
+      });
+
+    } catch (error) {
+      console.error('Error deleting resident:', error);
       res.status(500).json({ 
-        message: error.message || 'Gagal menghapus data penghuni' 
-      })
+        message: 'Gagal menghapus data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   }
 } 

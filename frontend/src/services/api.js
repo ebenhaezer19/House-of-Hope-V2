@@ -2,32 +2,36 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5002',
-  withCredentials: true,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Add request interceptor
+// Add request interceptor for debugging
 api.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    console.log('API Request:', {
+      method: config.method,
+      url: config.url,
+      data: config.data
+    });
     return config;
   },
-  error => Promise.reject(error)
+  error => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
 );
 
-// Add response interceptor
+// Add response interceptor for debugging
 api.interceptors.response.use(
-  response => response,
+  response => {
+    console.log('API Response:', response.data);
+    return response;
+  },
   error => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    console.error('API Response Error:', error);
     return Promise.reject(error);
   }
 );

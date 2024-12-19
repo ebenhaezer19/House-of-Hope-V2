@@ -58,8 +58,11 @@ model Resident {
   room        Room     @relation(fields: [roomId], references: [id])
   roomId      Int
   documents   Document[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  status      String    @default("ACTIVE")
+  exitDate    DateTime?
+  alumniNotes String?
 }
 
 model Document {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { Card } from '../components/shared'
@@ -26,6 +26,7 @@ ChartJS.register(
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [residents, setResidents] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
     byEducation: {},
@@ -43,46 +44,92 @@ const Dashboard = () => {
   const [timeStats, setTimeStats] = useState({
     byMonth: {
       labels: [],
-      newResidents: [],
+      active: [],
+      new: [],
       alumni: []
     }
   });
 
+  // Tambahkan ref untuk chart
+  const chartRef = useRef(null);
+
   // Fungsi untuk menghitung statistik timeline
   const calculateTimeStats = (residents) => {
-    const monthlyStats = residents.reduce((acc, resident) => {
+    console.log('Raw residents data:', residents);
+
+    // Inisialisasi statistik per bulan
+    const monthlyStats = {};
+    
+    residents.forEach(resident => {
       const createdAt = new Date(resident.createdAt);
       const monthKey = `${createdAt.getFullYear()}-${(createdAt.getMonth() + 1).toString().padStart(2, '0')}`;
       
-      if (!acc[monthKey]) {
-        acc[monthKey] = {
-          newResidents: 0,
-          alumni: 0
+      // Inisialisasi data bulan jika belum ada
+      if (!monthlyStats[monthKey]) {
+        monthlyStats[monthKey] = {
+          active: 0,
+          new: 0,
+          alumni: 0,
+          total: 0
         };
       }
-      
-      acc[monthKey].newResidents++;
-      
-      if (resident.exitDate) {
-        const exitDate = new Date(resident.exitDate);
-        const exitMonthKey = `${exitDate.getFullYear()}-${(exitDate.getMonth() + 1).toString().padStart(2, '0')}`;
-        
-        if (!acc[exitMonthKey]) {
-          acc[exitMonthKey] = { newResidents: 0, alumni: 0 };
-        }
-        acc[exitMonthKey].alumni++;
-      }
-      
-      return acc;
-    }, {});
 
+      // Hitung berdasarkan status
+      if (resident.status === 'ALUMNI') {
+        // Jika alumni, tambahkan ke bulan keluar
+        if (resident.exitDate) {
+          const exitDate = new Date(resident.exitDate);
+          const exitMonthKey = `${exitDate.getFullYear()}-${(exitDate.getMonth() + 1).toString().padStart(2, '0')}`;
+          
+          if (!monthlyStats[exitMonthKey]) {
+            monthlyStats[exitMonthKey] = {
+              active: 0,
+              new: 0,
+              alumni: 0,
+              total: 0
+            };
+          }
+          
+          monthlyStats[exitMonthKey].alumni++;
+          monthlyStats[exitMonthKey].total--;
+        }
+      } else if (resident.status === 'NEW') {
+        monthlyStats[monthKey].new++;
+        monthlyStats[monthKey].total++;
+      } else {
+        monthlyStats[monthKey].active++;
+        monthlyStats[monthKey].total++;
+      }
+    });
+
+    console.log('Monthly stats before sorting:', monthlyStats);
+
+    // Sort bulan
     const sortedMonths = Object.keys(monthlyStats).sort();
-    
-    return {
-      labels: sortedMonths,
-      newResidents: sortedMonths.map(month => monthlyStats[month].newResidents),
+
+    // Hitung akumulasi
+    let runningTotal = 0;
+    sortedMonths.forEach(month => {
+      runningTotal += monthlyStats[month].total;
+      monthlyStats[month].active = runningTotal - monthlyStats[month].alumni;
+    });
+
+    // Format hasil akhir
+    const result = {
+      labels: sortedMonths.map(month => {
+        const [year, monthNum] = month.split('-');
+        return new Date(year, parseInt(monthNum) - 1).toLocaleDateString('id-ID', { 
+          month: 'short', 
+          year: 'numeric' 
+        });
+      }),
+      active: sortedMonths.map(month => monthlyStats[month].active),
+      new: sortedMonths.map(month => monthlyStats[month].new),
       alumni: sortedMonths.map(month => monthlyStats[month].alumni)
     };
+
+    console.log('Final timeline stats:', result);
+    return result;
   };
 
   useEffect(() => {
@@ -90,12 +137,15 @@ const Dashboard = () => {
       try {
         setLoading(true)
         const response = await api.get('/api/residents')
-        const residents = response.data
-        console.log('Raw residents data:', residents) // Debug log
+        const residentsData = response.data
+        console.log('Raw residents data:', residentsData)
+
+        // Simpan data residents
+        setResidents(residentsData);
 
         // Hitung statistik
         const statistics = {
-          total: residents.length,
+          total: residentsData.length,
           byEducation: {},
           byGender: {
             MALE: 0,
@@ -108,7 +158,7 @@ const Dashboard = () => {
         }
 
         // Hitung berdasarkan pendidikan
-        residents.forEach(resident => {
+        residentsData.forEach(resident => {
           if (resident.education) {
             statistics.byEducation[resident.education] = 
               (statistics.byEducation[resident.education] || 0) + 1
@@ -127,7 +177,7 @@ const Dashboard = () => {
         setStats(statistics)
 
         // Tambahkan perhitungan timeline stats
-        const timelineStats = calculateTimeStats(residents);
+        const timelineStats = calculateTimeStats(residentsData);
         setTimeStats({
           byMonth: timelineStats
         });
@@ -142,6 +192,15 @@ const Dashboard = () => {
 
     fetchStats()
   }, [])
+
+  // Update useEffect untuk destroy chart sebelum update
+  useEffect(() => {
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+    };
+  }, []);
 
   // Chart options
   const chartOptions = {
@@ -201,10 +260,17 @@ const Dashboard = () => {
     labels: timeStats.byMonth.labels,
     datasets: [
       {
-        label: 'Penghuni Baru',
-        data: timeStats.byMonth.newResidents,
+        label: 'Penghuni Aktif',
+        data: timeStats.byMonth.active,
         backgroundColor: 'rgba(99, 102, 241, 0.8)',
         borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Penghuni Baru',
+        data: timeStats.byMonth.new,
+        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+        borderColor: 'rgba(16, 185, 129, 1)',
         borderWidth: 1
       },
       {
@@ -219,23 +285,27 @@ const Dashboard = () => {
 
   // Options untuk timeline chart
   const timelineChartOptions = {
-    ...chartOptions,
+    responsive: true,
+    maintainAspectRatio: false,
     scales: {
       x: {
-        title: {
-          display: true,
-          text: 'Bulan'
-        }
+        stacked: true
       },
       y: {
+        stacked: true,
         beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Jumlah Penghuni'
-        },
         ticks: {
           stepSize: 1
         }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom'
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false
       }
     }
   };
@@ -324,11 +394,39 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Tambahkan Timeline Chart */}
+      {/* Timeline Section */}
       <Card>
         <h3 className="text-lg font-medium mb-4">Statistik Timeline Penghuni</h3>
+        
+        {/* Status Summary */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="text-center p-4 bg-indigo-50 rounded-lg">
+            <h4 className="text-sm font-medium text-indigo-600">Penghuni Aktif</h4>
+            <p className="text-2xl font-bold text-indigo-600">
+              {residents.filter(r => r.status === 'ACTIVE').length}
+            </p>
+          </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <h4 className="text-sm font-medium text-green-600">Penghuni Baru</h4>
+            <p className="text-2xl font-bold text-green-600">
+              {residents.filter(r => r.status === 'NEW').length}
+            </p>
+          </div>
+          <div className="text-center p-4 bg-yellow-50 rounded-lg">
+            <h4 className="text-sm font-medium text-yellow-600">Alumni</h4>
+            <p className="text-2xl font-bold text-yellow-600">
+              {residents.filter(r => r.status === 'ALUMNI').length}
+            </p>
+          </div>
+        </div>
+
+        {/* Chart */}
         <div className="h-[300px]">
-          <Bar data={timelineChartData} options={timelineChartOptions} />
+          <Bar 
+            ref={chartRef}
+            data={timelineChartData} 
+            options={timelineChartOptions}
+          />
         </div>
       </Card>
     </div>

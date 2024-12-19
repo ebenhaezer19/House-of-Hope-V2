@@ -54,7 +54,7 @@ const ResidentForm = () => {
 
       } catch (error) {
         console.error('Error fetching rooms:', error);
-        setRoomError('Gagal mengambil data kamar');
+        setRoomError('Gagal mengambil data kamar. Silakan coba lagi.');
         setRooms([]);
       } finally {
         setLoadingRooms(false);
@@ -89,7 +89,12 @@ const ResidentForm = () => {
     
     // File
     photo: null,
-    documents: []
+    documents: [],
+    
+    // Status
+    status: 'ACTIVE',
+    exitDate: '',
+    alumniNotes: ''
   })
 
   const handleFileChange = (e) => {
@@ -125,8 +130,20 @@ const ResidentForm = () => {
       education: 'Pendidikan',
       schoolName: 'Nama Sekolah',
       assistance: 'Jenis Bantuan',
-      roomId: 'Kamar'
+      roomId: 'Kamar',
+      status: 'Status'
     };
+
+    if (formData.status === 'ALUMNI') {
+      if (!formData.exitDate) {
+        setError('Tanggal keluar harus diisi untuk alumni');
+        return false;
+      }
+      if (!formData.alumniNotes) {
+        setError('Keterangan alumni harus diisi');
+        return false;
+      }
+    }
 
     const missingFields = Object.entries(requiredFields)
       .filter(([key]) => !formData[key])
@@ -143,39 +160,25 @@ const ResidentForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      // Format data untuk dikirim
       const residentData = {
-        name: formData.name,
-        nik: formData.nik,
-        birthPlace: formData.birthPlace,
-        birthDate: formData.birthDate,
-        gender: formData.gender,
-        address: formData.address,
-        phone: formData.phone || null,
-        education: formData.education,
-        schoolName: formData.schoolName,
-        grade: formData.grade || null,
-        major: formData.major || null,
-        assistance: formData.assistance,
-        details: formData.details || null,
-        roomId: parseInt(formData.roomId)  // Convert to number
+        ...formData,
+        roomId: parseInt(formData.roomId),
+        status: formData.status || 'ACTIVE',
+        exitDate: formData.status === 'ALUMNI' ? new Date(formData.exitDate).toISOString() : null,
+        alumniNotes: formData.status === 'ALUMNI' ? formData.alumniNotes : null
       };
 
-      console.log('Sending data:', residentData);
+      console.log('Sending resident data:', residentData);
 
-      // Create FormData for files
       const formDataToSend = new FormData();
       formDataToSend.append('data', JSON.stringify(residentData));
       
-      // Add files if any
       if (files.photo) {
         formDataToSend.append('photo', files.photo);
       }
@@ -185,7 +188,6 @@ const ResidentForm = () => {
         });
       }
 
-      // Send request
       const response = await api.post('/api/residents', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -194,23 +196,15 @@ const ResidentForm = () => {
 
       console.log('Response:', response.data);
 
-      // Redirect with success message
+      await api.get('/api/residents');
+
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil ditambahkan' }
       });
 
     } catch (error) {
-      console.error('Error detail:', error);
-      if (error.response?.data) {
-        console.log('Server response:', error.response.data);
-        if (error.response.data.missingFields) {
-          setError(`Field berikut harus diisi: ${error.response.data.missingFields.join(', ')}`);
-        } else {
-          setError(error.response.data.message || 'Gagal menambahkan data penghuni');
-        }
-      } else {
-        setError('Gagal menambahkan data penghuni');
-      }
+      console.error('Error submitting form:', error);
+      setError(error.response?.data?.message || 'Gagal menambahkan data penghuni');
     } finally {
       setLoading(false);
     }
@@ -394,6 +388,60 @@ const ResidentForm = () => {
                 help="KTP, Kartu Keluarga, dll (PDF/DOC)"
                 error={error && error.documents}
               />
+            </div>
+          </div>
+
+          {/* Tambahkan section Status */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Status Penghuni</h3>
+            <div className="grid grid-cols-1 gap-6">
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  setFormData(prev => ({
+                    ...prev, 
+                    status: newStatus,
+                    exitDate: newStatus === 'ALUMNI' ? prev.exitDate : '',
+                    alumniNotes: newStatus === 'ALUMNI' ? prev.alumniNotes : ''
+                  }));
+                }}
+                options={[
+                  { value: 'ACTIVE', label: 'Penghuni Aktif' },
+                  { value: 'NEW', label: 'Penghuni Baru' },
+                  { value: 'ALUMNI', label: 'Alumni' }
+                ]}
+                required
+              />
+              
+              {/* Alumni Fields */}
+              {formData.status === 'ALUMNI' && (
+                <>
+                  <Input
+                    type="date"
+                    label="Tanggal Keluar"
+                    name="exitDate"
+                    value={formData.exitDate || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev, 
+                      exitDate: e.target.value
+                    }))}
+                    required
+                  />
+                  <Textarea
+                    label="Keterangan Alumni"
+                    name="alumniNotes"
+                    value={formData.alumniNotes || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev, 
+                      alumniNotes: e.target.value
+                    }))}
+                    placeholder="Contoh: Melanjutkan kuliah di Universitas X"
+                    required
+                  />
+                </>
+              )}
             </div>
           </div>
 

@@ -571,6 +571,34 @@ app.get('/api/auth/me', authMiddleware, async (req: AuthRequest, res: Response) 
   }
 });
 
+// Delete resident
+app.delete('/api/residents/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Hapus dokumen terkait
+    await prisma.document.deleteMany({
+      where: { residentId: id }
+    });
+
+    // Hapus data penghuni
+    const deleted = await prisma.resident.delete({
+      where: { id }
+    });
+
+    res.json({ 
+      message: 'Data penghuni berhasil dihapus',
+      data: deleted
+    });
+  } catch (error) {
+    console.error('Error deleting resident:', error);
+    res.status(500).json({ 
+      message: 'Gagal menghapus data penghuni',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
+
 // Start server
 const server = app.listen(PORT, () => {
   console.log('=================================');
