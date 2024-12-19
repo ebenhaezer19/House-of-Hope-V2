@@ -13,6 +13,8 @@ import {
   Legend,
   ArcElement
 } from 'chart.js'
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 ChartJS.register(
   CategoryScale,
@@ -52,6 +54,7 @@ const Dashboard = () => {
 
   // Tambahkan ref untuk chart
   const chartRef = useRef(null);
+  const dashboardRef = useRef(null);  // Tambahkan ref untuk dashboard container
 
   // Definisikan warna yang konsisten
   const chartColors = {
@@ -356,6 +359,40 @@ const Dashboard = () => {
     }
   };
 
+  // Fungsi untuk export PDF
+  const exportToPDF = async () => {
+    try {
+      const dashboard = dashboardRef.current;
+      const canvas = await html2canvas(dashboard, {
+        scale: 2,  // Tingkatkan kualitas
+        useCORS: true,  // Untuk menangani gambar cross-origin
+        logging: false  // Matikan logging
+      });
+
+      const imgWidth = 210;  // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+
+      // Tambahkan header
+      pdf.setFontSize(16);
+      pdf.text('Laporan Statistik Penghuni', 105, 15, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 105, 22, { align: 'center' });
+      
+      // Tambahkan gambar dashboard
+      pdf.addImage(imgData, 'PNG', 0, 30, imgWidth, imgHeight);
+
+      // Download PDF
+      pdf.save(`statistik-penghuni-${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      // Tambahkan notifikasi error jika perlu
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="text-lg text-gray-600">Memuat statistik...</div>
@@ -369,112 +406,129 @@ const Dashboard = () => {
   )
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Statistik Penghuni</h1>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <div className="text-center">
-            <h3 className="text-lg font-medium">Total Penghuni</h3>
-            <p className="text-3xl font-bold text-indigo-600 mt-2">{stats.total}</p>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <h3 className="text-lg font-medium">Berdasarkan Gender</h3>
-            <div className="mt-2 space-y-2">
-              <div>
-                <span className="text-gray-600">Laki-laki:</span>
-                <span className="ml-2 font-bold text-indigo-600">{stats.byGender.MALE}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Perempuan:</span>
-                <span className="ml-2 font-bold text-indigo-600">{stats.byGender.FEMALE}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <h3 className="text-lg font-medium">Berdasarkan Bantuan</h3>
-            <div className="mt-2 space-y-2">
-              <div>
-                <span className="text-gray-600">Yayasan:</span>
-                <span className="ml-2 font-bold text-indigo-600">{stats.byAssistance.YAYASAN}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Diakonia:</span>
-                <span className="ml-2 font-bold text-indigo-600">{stats.byAssistance.DIAKONIA}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
+    <div className="space-y-8">
+      <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+        <h1 className="text-2xl font-semibold text-gray-900">Statistik Penghuni</h1>
+        <button
+          onClick={exportToPDF}
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-sm font-medium text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5 mr-2" 
+            viewBox="0 0 20 20" 
+            fill="currentColor"
+          >
+            <path 
+              fillRule="evenodd" 
+              d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" 
+              clipRule="evenodd" 
+            />
+          </svg>
+          Export PDF
+        </button>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <h3 className="text-lg font-medium mb-4">Statistik Pendidikan</h3>
+      <div ref={dashboardRef} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <Card className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-3">Total Penghuni</h3>
+              <p className="text-3xl font-bold text-indigo-600">{stats.total}</p>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-3">Berdasarkan Gender</h3>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <span className="text-gray-600">Laki-laki:</span>
+                  <span className="ml-3 font-bold text-indigo-600">{stats.byGender.MALE}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Perempuan:</span>
+                  <span className="ml-3 font-bold text-indigo-600">{stats.byGender.FEMALE}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-3">Berdasarkan Bantuan</h3>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <span className="text-gray-600">Yayasan:</span>
+                  <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.YAYASAN}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Diakonia:</span>
+                  <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.DIAKONIA}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="p-6">
+            <h3 className="text-lg font-medium mb-6">Statistik Pendidikan</h3>
+            <div className="h-[300px]">
+              <Bar data={educationChartData} options={chartOptions} />
+            </div>
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-6">Statistik Gender</h3>
+              <div className="h-[200px]">
+                <Doughnut data={genderChartData} options={chartOptions} />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-6">Statistik Bantuan</h3>
+              <div className="h-[200px]">
+                <Pie data={assistanceChartData} options={chartOptions} />
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-medium mb-6">Statistik Timeline Penghuni</h3>
+          
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="text-center p-6 bg-indigo-50 rounded-lg">
+              <h4 className="text-sm font-medium text-indigo-600 mb-2">Penghuni Aktif</h4>
+              <p className="text-2xl font-bold text-indigo-600">
+                {residents.filter(r => r.status === 'ACTIVE').length}
+              </p>
+            </div>
+            <div className="text-center p-6 bg-green-50 rounded-lg">
+              <h4 className="text-sm font-medium text-green-600">Penghuni Baru</h4>
+              <p className="text-2xl font-bold text-green-600">
+                {residents.filter(r => r.status === 'NEW').length}
+              </p>
+            </div>
+            <div className="text-center p-6 bg-yellow-50 rounded-lg">
+              <h4 className="text-sm font-medium text-yellow-600">Alumni</h4>
+              <p className="text-2xl font-bold text-yellow-600">
+                {residents.filter(r => r.status === 'ALUMNI').length}
+              </p>
+            </div>
+          </div>
+
           <div className="h-[300px]">
-            <Bar data={educationChartData} options={chartOptions} />
+            <Bar 
+              ref={chartRef}
+              data={timelineChartData} 
+              options={timelineChartOptions}
+            />
           </div>
         </Card>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Card>
-            <h3 className="text-lg font-medium mb-4">Statistik Gender</h3>
-            <div className="h-[200px]">
-              <Doughnut data={genderChartData} options={chartOptions} />
-            </div>
-          </Card>
-
-          <Card>
-            <h3 className="text-lg font-medium mb-4">Statistik Bantuan</h3>
-            <div className="h-[200px]">
-              <Pie data={assistanceChartData} options={chartOptions} />
-            </div>
-          </Card>
-        </div>
       </div>
-
-      {/* Timeline Section */}
-      <Card>
-        <h3 className="text-lg font-medium mb-4">Statistik Timeline Penghuni</h3>
-        
-        {/* Status Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-4 bg-indigo-50 rounded-lg">
-            <h4 className="text-sm font-medium text-indigo-600">Penghuni Aktif</h4>
-            <p className="text-2xl font-bold text-indigo-600">
-              {residents.filter(r => r.status === 'ACTIVE').length}
-            </p>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <h4 className="text-sm font-medium text-green-600">Penghuni Baru</h4>
-            <p className="text-2xl font-bold text-green-600">
-              {residents.filter(r => r.status === 'NEW').length}
-            </p>
-          </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <h4 className="text-sm font-medium text-yellow-600">Alumni</h4>
-            <p className="text-2xl font-bold text-yellow-600">
-              {residents.filter(r => r.status === 'ALUMNI').length}
-            </p>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="h-[300px]">
-          <Bar 
-            ref={chartRef}
-            data={timelineChartData} 
-            options={timelineChartOptions}
-          />
-        </div>
-      </Card>
     </div>
   )
 }
