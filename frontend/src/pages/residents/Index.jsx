@@ -16,6 +16,13 @@ const ResidentIndex = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const filterStatus = location.state?.filterStatus;
+  const [filters, setFilters] = useState({
+    name: '',
+    gender: '',
+    room: '',
+    assistance: '',
+    status: ''
+  });
 
   useEffect(() => {
     if (successMessage) {
@@ -161,6 +168,26 @@ const ResidentIndex = () => {
     return new Date(dateString).toLocaleDateString('id-ID', options);
   };
 
+  // Tambahkan fungsi untuk handle perubahan filter
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Tambahkan fungsi untuk filter data
+  const filteredResidents = residents.filter(resident => {
+    return (
+      resident.name.toLowerCase().includes(filters.name.toLowerCase()) &&
+      (filters.gender === '' || resident.gender === filters.gender) &&
+      (filters.room === '' || resident.room?.number?.toString() === filters.room) &&
+      (filters.assistance === '' || resident.assistance === filters.assistance) &&
+      (filters.status === '' || resident.status === filters.status)
+    );
+  });
+
   if (loading) {
     return <div className="text-center py-10">Memuat data...</div>
   }
@@ -204,6 +231,89 @@ const ResidentIndex = () => {
         <Alert type="error" message={error} />
       )}
 
+      {/* Filter Section */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h2 className="text-lg font-medium mb-4">Filter Penghuni</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={filters.name}
+              onChange={handleFilterChange}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="Cari nama..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Jenis Kelamin
+            </label>
+            <select
+              name="gender"
+              value={filters.gender}
+              onChange={handleFilterChange}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="">Semua</option>
+              <option value="MALE">Laki-laki</option>
+              <option value="FEMALE">Perempuan</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nomor Kamar
+            </label>
+            <input
+              type="text"
+              name="room"
+              value={filters.room}
+              onChange={handleFilterChange}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="Nomor kamar..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bantuan
+            </label>
+            <select
+              name="assistance"
+              value={filters.assistance}
+              onChange={handleFilterChange}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="">Semua</option>
+              <option value="YAYASAN">Yayasan</option>
+              <option value="MANDIRI">Mandiri</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="">Semua</option>
+              <option value="NEW">Penghuni Baru</option>
+              <option value="ACTIVE">Penghuni Aktif</option>
+              <option value="ALUMNI">Alumni</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -243,7 +353,7 @@ const ResidentIndex = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {residents.map((resident) => (
+              {filteredResidents.map((resident) => (
                 <tr key={resident.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -391,13 +501,12 @@ const ResidentIndex = () => {
       </div>
 
       {/* Tampilkan pesan jika tidak ada data */}
-      {residents.length === 0 && (
+      {filteredResidents.length === 0 && (
         <div className="text-center py-10 bg-gray-50 rounded-lg">
           <p className="text-gray-500">
-            {filterStatus 
-              ? `Tidak ada ${getStatusLabel(filterStatus).toLowerCase()} saat ini`
-              : 'Tidak ada data penghuni'
-            }
+            {residents.length === 0 
+              ? 'Tidak ada data penghuni'
+              : 'Tidak ada penghuni yang sesuai dengan filter'}
           </p>
         </div>
       )}
