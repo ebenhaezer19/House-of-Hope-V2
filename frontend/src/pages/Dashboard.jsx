@@ -40,6 +40,50 @@ const Dashboard = () => {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [timeStats, setTimeStats] = useState({
+    byMonth: {
+      labels: [],
+      newResidents: [],
+      alumni: []
+    }
+  });
+
+  // Fungsi untuk menghitung statistik timeline
+  const calculateTimeStats = (residents) => {
+    const monthlyStats = residents.reduce((acc, resident) => {
+      const createdAt = new Date(resident.createdAt);
+      const monthKey = `${createdAt.getFullYear()}-${(createdAt.getMonth() + 1).toString().padStart(2, '0')}`;
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = {
+          newResidents: 0,
+          alumni: 0
+        };
+      }
+      
+      acc[monthKey].newResidents++;
+      
+      if (resident.exitDate) {
+        const exitDate = new Date(resident.exitDate);
+        const exitMonthKey = `${exitDate.getFullYear()}-${(exitDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        
+        if (!acc[exitMonthKey]) {
+          acc[exitMonthKey] = { newResidents: 0, alumni: 0 };
+        }
+        acc[exitMonthKey].alumni++;
+      }
+      
+      return acc;
+    }, {});
+
+    const sortedMonths = Object.keys(monthlyStats).sort();
+    
+    return {
+      labels: sortedMonths,
+      newResidents: sortedMonths.map(month => monthlyStats[month].newResidents),
+      alumni: sortedMonths.map(month => monthlyStats[month].alumni)
+    };
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -81,6 +125,13 @@ const Dashboard = () => {
 
         console.log('Calculated stats:', statistics) // Debug log
         setStats(statistics)
+
+        // Tambahkan perhitungan timeline stats
+        const timelineStats = calculateTimeStats(residents);
+        setTimeStats({
+          byMonth: timelineStats
+        });
+
       } catch (error) {
         console.error('Error fetching statistics:', error)
         setError('Gagal memuat statistik')
@@ -144,6 +195,50 @@ const Dashboard = () => {
       ]
     }]
   }
+
+  // Data untuk timeline chart
+  const timelineChartData = {
+    labels: timeStats.byMonth.labels,
+    datasets: [
+      {
+        label: 'Penghuni Baru',
+        data: timeStats.byMonth.newResidents,
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Alumni',
+        data: timeStats.byMonth.alumni,
+        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+        borderColor: 'rgba(245, 158, 11, 1)',
+        borderWidth: 1
+      }
+    ]
+  };
+
+  // Options untuk timeline chart
+  const timelineChartOptions = {
+    ...chartOptions,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Bulan'
+        }
+      },
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Jumlah Penghuni'
+        },
+        ticks: {
+          stepSize: 1
+        }
+      }
+    }
+  };
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -228,6 +323,14 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      {/* Tambahkan Timeline Chart */}
+      <Card>
+        <h3 className="text-lg font-medium mb-4">Statistik Timeline Penghuni</h3>
+        <div className="h-[300px]">
+          <Bar data={timelineChartData} options={timelineChartOptions} />
+        </div>
+      </Card>
     </div>
   )
 }
