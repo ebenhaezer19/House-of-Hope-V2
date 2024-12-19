@@ -1,153 +1,235 @@
-import React from 'react'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { UserGroupIcon, ExclamationCircleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import api from '../services/api'
+import { Card } from '../components/shared'
+import { Bar, Pie, Doughnut } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+)
 
 const Dashboard = () => {
   const navigate = useNavigate()
   const [stats, setStats] = useState({
-    totalResidents: 100,
-    activeProblems: 12,
-    todayTasks: 8,
-    residentStats: [
-      { month: 'Jan', residents: 12, alumni: 2 },
-      { month: 'Feb', residents: 18, alumni: 3 },
-      { month: 'Mar', residents: 3, alumni: 1 },
-      { month: 'Apr', residents: 5, alumni: 4 },
-      { month: 'May', residents: 2, alumni: 2 },
-      { month: 'Jun', residents: 3, alumni: 1 }
-    ],
-    recentActivities: [
-      { id: 1, user: 'John Doe', action: 'Menyelesaikan tugas piket', timestamp: '2 jam yang lalu' },
-      { id: 2, user: 'Jane Smith', action: 'Melaporkan masalah akademik', timestamp: '4 jam yang lalu' }
-    ]
+    total: 0,
+    byEducation: {},
+    byGender: {
+      MALE: 0,
+      FEMALE: 0
+    },
+    byAssistance: {
+      YAYASAN: 0,
+      DIAKONIA: 0
+    }
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Handler untuk navigasi
-  const handleNavigation = (path) => {
-    navigate(path)
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true)
+        const response = await api.get('/api/residents')
+        const residents = response.data
+        console.log('Raw residents data:', residents) // Debug log
+
+        // Hitung statistik
+        const statistics = {
+          total: residents.length,
+          byEducation: {},
+          byGender: {
+            MALE: 0,
+            FEMALE: 0
+          },
+          byAssistance: {
+            YAYASAN: 0,
+            DIAKONIA: 0
+          }
+        }
+
+        // Hitung berdasarkan pendidikan
+        residents.forEach(resident => {
+          if (resident.education) {
+            statistics.byEducation[resident.education] = 
+              (statistics.byEducation[resident.education] || 0) + 1
+          }
+          
+          if (resident.gender) {
+            statistics.byGender[resident.gender]++
+          }
+          
+          if (resident.assistance) {
+            statistics.byAssistance[resident.assistance]++
+          }
+        })
+
+        console.log('Calculated stats:', statistics) // Debug log
+        setStats(statistics)
+      } catch (error) {
+        console.error('Error fetching statistics:', error)
+        setError('Gagal memuat statistik')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  // Chart options
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20
+        }
+      }
+    }
   }
+
+  // Chart data
+  const educationChartData = {
+    labels: Object.keys(stats.byEducation),
+    datasets: [{
+      label: 'Jumlah Penghuni',
+      data: Object.values(stats.byEducation),
+      backgroundColor: [
+        'rgba(99, 102, 241, 0.8)',  // Indigo
+        'rgba(59, 130, 246, 0.8)',  // Blue
+        'rgba(16, 185, 129, 0.8)',  // Green
+        'rgba(245, 158, 11, 0.8)',  // Yellow
+        'rgba(239, 68, 68, 0.8)',   // Red
+        'rgba(168, 85, 247, 0.8)'   // Purple
+      ]
+    }]
+  }
+
+  const genderChartData = {
+    labels: ['Laki-laki', 'Perempuan'],
+    datasets: [{
+      data: [stats.byGender.MALE, stats.byGender.FEMALE],
+      backgroundColor: [
+        'rgba(59, 130, 246, 0.8)',  // Blue
+        'rgba(236, 72, 153, 0.8)'   // Pink
+      ]
+    }]
+  }
+
+  const assistanceChartData = {
+    labels: ['Yayasan', 'Diakonia'],
+    datasets: [{
+      data: [stats.byAssistance.YAYASAN, stats.byAssistance.DIAKONIA],
+      backgroundColor: [
+        'rgba(16, 185, 129, 0.8)',  // Green
+        'rgba(245, 158, 11, 0.8)'   // Yellow
+      ]
+    }]
+  }
+
+  if (loading) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="text-lg text-gray-600">Memuat statistik...</div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="bg-red-50 p-4 rounded-lg">
+      <div className="text-red-700">{error}</div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      <h1 className="text-2xl font-semibold">Statistik Penghuni</h1>
+
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Total Penghuni"
-          value={stats.totalResidents}
-          change={12}
-          trend="up"
-          icon={<UserGroupIcon className="h-6 w-6 text-white" />}
-          color="bg-emerald-500"
-          onDetail={() => handleNavigation('/dashboard/residents')}
-        />
-        <StatCard
-          title="Masalah Aktif"
-          value={stats.activeProblems}
-          change={2}
-          trend="down"
-          icon={<ExclamationCircleIcon className="h-6 w-6 text-white" />}
-          color="bg-red-500"
-          onDetail={() => handleNavigation('/dashboard/problems')}
-        />
-        <StatCard
-          title="Tugas Hari Ini"
-          value={stats.todayTasks}
-          change={5}
-          trend="up"
-          icon={<ClipboardDocumentListIcon className="h-6 w-6 text-white" />}
-          color="bg-emerald-500"
-          onDetail={() => handleNavigation('/dashboard/tasks')}
-        />
+        <Card>
+          <div className="text-center">
+            <h3 className="text-lg font-medium">Total Penghuni</h3>
+            <p className="text-3xl font-bold text-indigo-600 mt-2">{stats.total}</p>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-center">
+            <h3 className="text-lg font-medium">Berdasarkan Gender</h3>
+            <div className="mt-2 space-y-2">
+              <div>
+                <span className="text-gray-600">Laki-laki:</span>
+                <span className="ml-2 font-bold text-indigo-600">{stats.byGender.MALE}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Perempuan:</span>
+                <span className="ml-2 font-bold text-indigo-600">{stats.byGender.FEMALE}</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-center">
+            <h3 className="text-lg font-medium">Berdasarkan Bantuan</h3>
+            <div className="mt-2 space-y-2">
+              <div>
+                <span className="text-gray-600">Yayasan:</span>
+                <span className="ml-2 font-bold text-indigo-600">{stats.byAssistance.YAYASAN}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Diakonia:</span>
+                <span className="ml-2 font-bold text-indigo-600">{stats.byAssistance.DIAKONIA}</span>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Charts and Activities */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Resident Statistics Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Statistik Penghuni</h2>
-          <div className="w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.residentStats}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="residents" name="Penghuni Baru" fill="#818CF8" />
-                <Bar dataKey="alumni" name="Alumni" fill="#34D399" />
-              </BarChart>
-            </ResponsiveContainer>
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Statistik Pendidikan</h3>
+          <div className="h-[300px]">
+            <Bar data={educationChartData} options={chartOptions} />
           </div>
-        </div>
+        </Card>
 
-        {/* Recent Activities */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Aktivitas Terbaru</h2>
-            <button 
-              onClick={() => handleNavigation('/dashboard/activities')}
-              className="text-indigo-600 hover:text-indigo-800"
-            >
-              Lihat Semua
-            </button>
-          </div>
-          <div className="space-y-4">
-            {stats.recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <UserGroupIcon className="h-4 w-4 text-indigo-600" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
-                    {activity.user}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {activity.action}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 text-sm text-gray-500">
-                  {activity.timestamp}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Card>
+            <h3 className="text-lg font-medium mb-4">Statistik Gender</h3>
+            <div className="h-[200px]">
+              <Doughnut data={genderChartData} options={chartOptions} />
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="text-lg font-medium mb-4">Statistik Bantuan</h3>
+            <div className="h-[200px]">
+              <Pie data={assistanceChartData} options={chartOptions} />
+            </div>
+          </Card>
         </div>
       </div>
     </div>
   )
 }
-
-const StatCard = ({ title, value, change, trend, icon, color, onDetail }) => (
-  <div className="bg-white rounded-lg shadow p-6">
-    <div className="flex items-center">
-      <div className={`${color} p-3 rounded-lg`}>
-        {icon}
-      </div>
-      <div className="ml-5">
-        <h3 className="text-base font-medium text-gray-900">{title}</h3>
-        <div className="mt-1 flex items-baseline">
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          <p className={`ml-2 flex items-baseline text-sm ${
-            trend === 'up' ? 'text-emerald-600' : 'text-red-600'
-          }`}>
-            {trend === 'up' ? '↑' : '↓'} {change}%
-          </p>
-        </div>
-      </div>
-    </div>
-    <div className="mt-4">
-      <button
-        onClick={onDetail}
-        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-      >
-        Lihat Detail
-      </button>
-    </div>
-  </div>
-)
 
 export default Dashboard 

@@ -15,6 +15,15 @@ interface FileRequest extends Request {
   };
 }
 
+// Di bagian atas file, tambahkan interface untuk AuthRequest
+interface AuthRequest extends Request {
+  user?: {
+    userId: number;
+    email: string;
+    role: string;
+  };
+}
+
 const app = express();
 const prisma = new PrismaClient();
 const PORT = 5002;
@@ -502,6 +511,65 @@ app.put('/api/residents/:id',
     }
   }
 );
+
+// Auth middleware
+const authMiddleware = async (req: AuthRequest, res: Response, next: Function) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      res.status(401).json({ message: 'Token tidak ditemukan' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      userId: number;
+      email: string;
+      role: string;
+    };
+    
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Token tidak valid' });
+  }
+};
+
+// Check auth status
+app.get('/api/auth/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'User tidak terautentikasi' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      }
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'User tidak ditemukan' });
+      return;
+    }
+
+    res.json({
+      user,
+      isAuthenticated: true
+    });
+  } catch (error) {
+    console.error('Auth check error:', error);
+    res.status(500).json({ 
+      message: 'Gagal memeriksa status autentikasi',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
 
 // Start server
 const server = app.listen(PORT, () => {

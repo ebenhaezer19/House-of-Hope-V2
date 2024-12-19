@@ -1,16 +1,12 @@
-const Card = ({ title, children }) => {
+const Card = ({ children, title, className = '' }) => {
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
+    <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
       {title && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">{title}</h2>
-        </div>
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
       )}
-      <div className="px-6 py-4">
-        {children}
-      </div>
+      {children}
     </div>
-  )
-}
+  );
+};
 
-export default Card 
+export default Card; 
