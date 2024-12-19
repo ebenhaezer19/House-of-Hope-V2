@@ -61,12 +61,21 @@ const ResidentIndex = () => {
       setDeleteLoading(true);
       setDeleteError(null);
 
-      // Pastikan URL endpoint benar
+      // Panggil API untuk menghapus data
       await api.delete(`/api/residents/${id}`);
       
-      // Refresh data setelah hapus berhasil
-      await fetchResidents();
-      
+      // Refresh data setelah berhasil menghapus
+      const response = await api.get('/api/residents');
+      let filteredData = response.data;
+
+      // Terapkan filter jika ada
+      if (filterStatus) {
+        filteredData = filteredData.filter(resident => 
+          resident.status === filterStatus
+        );
+      }
+
+      setResidents(filteredData);
       setSuccessMessage('Data penghuni berhasil dihapus');
 
     } catch (error) {
@@ -312,8 +321,33 @@ const ResidentIndex = () => {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(resident.createdAt)}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {new Date(resident.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(resident.createdAt).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    {resident.status === 'ALUMNI' && resident.exitDate && (
+                      <div className="mt-1 text-xs">
+                        <span className="text-yellow-600 font-medium">Tanggal Keluar:</span>
+                        <br />
+                        <span className="text-gray-600">
+                          {new Date(resident.exitDate).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${

@@ -39,7 +39,10 @@ const EditResident = () => {
     major: '',
     assistance: 'YAYASAN',
     details: '',
-    roomId: ''
+    roomId: '',
+    status: '',
+    exitDate: '',
+    alumniNotes: ''
   })
 
   // Fetch resident data
@@ -65,7 +68,10 @@ const EditResident = () => {
           major: resident.major || '',
           assistance: resident.assistance,
           details: resident.details || '',
-          roomId: resident.room.id.toString()
+          roomId: resident.roomId.toString(),
+          status: resident.status,
+          exitDate: resident.exitDate ? new Date(resident.exitDate).toISOString().split('T')[0] : '',
+          alumniNotes: resident.alumniNotes || ''
         });
 
       } catch (error) {
@@ -161,30 +167,43 @@ const EditResident = () => {
       setLoading(true);
       setError(null);
 
-      // Create FormData
       const formDataToSend = new FormData();
-      formDataToSend.append('data', JSON.stringify(formData));
       
-      // Add files if any
+      // Tambahkan validasi untuk alumni
+      if (formData.status === 'ALUMNI') {
+        if (!formData.exitDate) {
+          setError('Tanggal keluar harus diisi untuk alumni');
+          return;
+        }
+        if (!formData.alumniNotes) {
+          setError('Keterangan alumni harus diisi');
+          return;
+        }
+      }
+
+      // Siapkan data untuk dikirim
+      const residentData = {
+        ...formData,
+        roomId: parseInt(formData.roomId),
+        exitDate: formData.status === 'ALUMNI' ? formData.exitDate : null,
+        alumniNotes: formData.status === 'ALUMNI' ? formData.alumniNotes : null
+      };
+
+      formDataToSend.append('data', JSON.stringify(residentData));
+      
+      // Handle file uploads jika ada
       if (files.photo) {
         formDataToSend.append('photo', files.photo);
       }
+      
       if (files.documents.length > 0) {
         files.documents.forEach(doc => {
           formDataToSend.append('documents', doc);
         });
       }
 
-      // Send request
-      const response = await api.put(`/api/residents/${id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      await api.put(`/api/residents/${id}`, formDataToSend);
 
-      console.log('Response:', response.data);
-
-      // Redirect with success message
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil diperbarui' }
       });
@@ -378,6 +397,61 @@ const EditResident = () => {
                     ))}
                   </ul>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tambahkan section Status */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Status Penghuni</h3>
+            <div className="grid grid-cols-1 gap-6">
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  setFormData(prev => ({
+                    ...prev, 
+                    status: newStatus,
+                    exitDate: newStatus === 'ALUMNI' ? prev.exitDate : '',
+                    alumniNotes: newStatus === 'ALUMNI' ? prev.alumniNotes : ''
+                  }));
+                }}
+                options={[
+                  { value: 'NEW', label: 'Penghuni Baru' },
+                  { value: 'ACTIVE', label: 'Penghuni Aktif' },
+                  { value: 'ALUMNI', label: 'Alumni' }
+                ]}
+                required
+              />
+              
+              {/* Alumni Fields */}
+              {formData.status === 'ALUMNI' && (
+                <>
+                  <Input
+                    type="date"
+                    label="Tanggal Keluar"
+                    name="exitDate"
+                    value={formData.exitDate}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev, 
+                      exitDate: e.target.value
+                    }))}
+                    required
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                  <Textarea
+                    label="Keterangan Alumni"
+                    name="alumniNotes"
+                    value={formData.alumniNotes}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev, 
+                      alumniNotes: e.target.value
+                    }))}
+                    placeholder="Contoh: Melanjutkan kuliah di Universitas X"
+                    required
+                  />
+                </>
               )}
             </div>
           </div>

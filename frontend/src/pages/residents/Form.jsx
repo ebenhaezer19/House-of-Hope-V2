@@ -462,6 +462,7 @@ const ResidentForm = () => {
                       exitDate: e.target.value
                     }))}
                     required
+                    max={new Date().toISOString().split('T')[0]} // Batasi maksimal hari ini
                   />
                   <Textarea
                     label="Keterangan Alumni"

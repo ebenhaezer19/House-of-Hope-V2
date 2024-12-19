@@ -4,6 +4,8 @@ import { FileService } from '../services/file.service'
 import { Prisma } from '@prisma/client'
 import { UploadedFile } from '../types/file.types'
 import { ResidentStatus } from '@prisma/client'
+import path from 'path'
+import fs from 'fs'
 
 const residentService = new ResidentService()
 const fileService = new FileService()
@@ -33,11 +35,23 @@ export class ResidentController {
 
   async getResident(req: Request, res: Response) {
     try {
-      const id = Number(req.params.id)
-      const resident = await residentService.findOne(id)
-      res.json(resident)
-    } catch (error: any) {
-      res.status(404).json({ message: error.message })
+      const id = Number(req.params.id);
+      const resident = await prisma.resident.findUnique({
+        where: { id },
+        include: {
+          documents: true,
+          room: true
+        }
+      });
+
+      if (!resident) {
+        return res.status(404).json({ message: 'Data penghuni tidak ditemukan' });
+      }
+
+      res.json(resident);
+    } catch (error) {
+      console.error('Error fetching resident:', error);
+      res.status(500).json({ message: 'Gagal mengambil data penghuni' });
     }
   }
 
@@ -140,14 +154,29 @@ export class ResidentController {
 
       // Cek apakah resident ada
       const resident = await prisma.resident.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+          documents: true
+        }
       });
 
       if (!resident) {
         return res.status(404).json({ message: 'Data penghuni tidak ditemukan' });
       }
 
-      // Hapus dokumen terkait terlebih dahulu
+      // Hapus file dokumen dari storage jika ada
+      for (const doc of resident.documents) {
+        try {
+          const filePath = path.join(__dirname, '../../uploads', path.basename(doc.path));
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (error) {
+          console.error('Error deleting file:', error);
+        }
+      }
+
+      // Hapus dokumen dari database
       await prisma.document.deleteMany({
         where: { residentId: id }
       });
@@ -158,6 +187,7 @@ export class ResidentController {
       });
 
       res.json({ 
+        success: true,
         message: 'Data penghuni berhasil dihapus',
         deletedId: id 
       });
@@ -165,6 +195,7 @@ export class ResidentController {
     } catch (error) {
       console.error('Error deleting resident:', error);
       res.status(500).json({ 
+        success: false,
         message: 'Gagal menghapus data penghuni',
         error: process.env.NODE_ENV === 'development' ? error : undefined
       });
