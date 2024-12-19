@@ -60,7 +60,7 @@ model Resident {
   documents   Document[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  status      String    @default("ACTIVE")
+  status      ResidentStatus
   exitDate    DateTime?
   alumniNotes String?
 }
@@ -93,6 +93,12 @@ enum Education {
 enum AssistanceType {
   YAYASAN
   DIAKONIA
+}
+
+enum ResidentStatus {
+  NEW
+  ACTIVE
+  ALUMNI
 }
 
 // ... model lainnya 

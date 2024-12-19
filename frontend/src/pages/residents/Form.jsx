@@ -91,8 +91,8 @@ const ResidentForm = () => {
     photo: null,
     documents: [],
     
-    // Status
-    status: 'ACTIVE',
+    // Status - default ke NEW untuk penghuni baru
+    status: 'NEW',
     exitDate: '',
     alumniNotes: ''
   })
@@ -134,6 +134,17 @@ const ResidentForm = () => {
       status: 'Status'
     };
 
+    // Validasi field wajib
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !formData[key])
+      .map(([_, label]) => label);
+
+    if (missingFields.length > 0) {
+      setError(`Field berikut harus diisi: ${missingFields.join(', ')}`);
+      return false;
+    }
+
+    // Validasi khusus untuk alumni
     if (formData.status === 'ALUMNI') {
       if (!formData.exitDate) {
         setError('Tanggal keluar harus diisi untuk alumni');
@@ -145,12 +156,15 @@ const ResidentForm = () => {
       }
     }
 
-    const missingFields = Object.entries(requiredFields)
-      .filter(([key]) => !formData[key])
-      .map(([_, label]) => label);
+    // Validasi NIK
+    if (formData.nik.length !== 16) {
+      setError('NIK harus 16 digit');
+      return false;
+    }
 
-    if (missingFields.length > 0) {
-      setError(`Field berikut harus diisi: ${missingFields.join(', ')}`);
+    // Validasi tanggal
+    if (new Date(formData.birthDate) > new Date()) {
+      setError('Tanggal lahir tidak valid');
       return false;
     }
 
@@ -166,22 +180,42 @@ const ResidentForm = () => {
       setLoading(true);
       setError(null);
 
+      // Format data untuk dikirim
       const residentData = {
-        ...formData,
+        name: formData.name,
+        nik: formData.nik,
+        birthPlace: formData.birthPlace,
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        address: formData.address,
+        phone: formData.phone || null,
+        education: formData.education,
+        schoolName: formData.schoolName,
+        grade: formData.grade || null,
+        major: formData.major || null,
+        assistance: formData.assistance,
+        details: formData.details || null,
         roomId: parseInt(formData.roomId),
-        status: formData.status || 'ACTIVE',
-        exitDate: formData.status === 'ALUMNI' ? new Date(formData.exitDate).toISOString() : null,
-        alumniNotes: formData.status === 'ALUMNI' ? formData.alumniNotes : null
+        status: formData.status,
+        createdAt: new Date().toISOString()
       };
 
-      console.log('Sending resident data:', residentData);
+      // Tambahkan exitDate dan alumniNotes hanya jika status ALUMNI
+      if (formData.status === 'ALUMNI') {
+        residentData.exitDate = new Date(formData.exitDate).toISOString();
+        residentData.alumniNotes = formData.alumniNotes;
+      }
+
+      console.log('Submitting data:', residentData);
 
       const formDataToSend = new FormData();
       formDataToSend.append('data', JSON.stringify(residentData));
-      
+
+      // Handle file uploads
       if (files.photo) {
         formDataToSend.append('photo', files.photo);
       }
+      
       if (files.documents.length > 0) {
         files.documents.forEach(doc => {
           formDataToSend.append('documents', doc);
@@ -194,9 +228,7 @@ const ResidentForm = () => {
         }
       });
 
-      console.log('Response:', response.data);
-
-      await api.get('/api/residents');
+      console.log('Server response:', response.data);
 
       navigate('/dashboard/residents', { 
         state: { message: 'Data penghuni berhasil ditambahkan' }
@@ -403,13 +435,14 @@ const ResidentForm = () => {
                   setFormData(prev => ({
                     ...prev, 
                     status: newStatus,
+                    // Reset alumni fields jika status bukan ALUMNI
                     exitDate: newStatus === 'ALUMNI' ? prev.exitDate : '',
                     alumniNotes: newStatus === 'ALUMNI' ? prev.alumniNotes : ''
                   }));
                 }}
                 options={[
-                  { value: 'ACTIVE', label: 'Penghuni Aktif' },
                   { value: 'NEW', label: 'Penghuni Baru' },
+                  { value: 'ACTIVE', label: 'Penghuni Aktif' },
                   { value: 'ALUMNI', label: 'Alumni' }
                 ]}
                 required
@@ -422,7 +455,7 @@ const ResidentForm = () => {
                     type="date"
                     label="Tanggal Keluar"
                     name="exitDate"
-                    value={formData.exitDate || ''}
+                    value={formData.exitDate}
                     onChange={(e) => setFormData(prev => ({
                       ...prev, 
                       exitDate: e.target.value
@@ -432,7 +465,7 @@ const ResidentForm = () => {
                   <Textarea
                     label="Keterangan Alumni"
                     name="alumniNotes"
-                    value={formData.alumniNotes || ''}
+                    value={formData.alumniNotes}
                     onChange={(e) => setFormData(prev => ({
                       ...prev, 
                       alumniNotes: e.target.value

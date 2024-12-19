@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ResidentStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -156,145 +156,119 @@ const upload = multer({
 });
 
 // Create resident
-app.post('/api/residents', 
-  upload.fields([
-    { name: 'photo', maxCount: 1 },
-    { name: 'documents', maxCount: 5 }
-  ]) as express.RequestHandler,
-  async (req: Request, res: Response) => {
-    try {
-      const files = (req as FileRequest).files;
-      console.log('Files:', files);
-      console.log('Body:', req.body);
+app.post('/api/residents', upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'documents', maxCount: 5 }
+]), async (req: Request, res: Response) => {
+  try {
+    const data = JSON.parse(req.body.data);
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      // Parse resident data
-      const residentData = JSON.parse(req.body.data);
-      console.log('Resident data:', residentData);
-
-      const {
-        name,
-        nik,
-        birthPlace,
-        birthDate,
-        gender,
-        address,
-        phone,
-        education,
-        schoolName,
-        grade,
-        major,
-        assistance,
-        details,
-        roomId
-      } = residentData;
-
-      // Log required fields validation
-      const requiredFields = {
-        name,
-        nik,
-        birthPlace,
-        birthDate,
-        gender,
-        address,
-        education,
-        schoolName,
-        assistance,
-        roomId
-      };
-
-      console.log('Checking required fields:', 
-        Object.entries(requiredFields).map(([key, value]) => ({
-          field: key,
-          value: value,
-          isValid: Boolean(value)
-        }))
-      );
-
-      // Validate required fields
-      const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value)
-        .map(([key]) => key);
-
-      if (missingFields.length > 0) {
-        console.log('Missing fields:', missingFields);
-        res.status(400).json({ 
-          message: 'Semua field wajib harus diisi',
-          missingFields 
-        });
-        return;
-      }
-
-      // Check if NIK already exists
-      const existingResident = await prisma.resident.findUnique({
-        where: { nik }
-      });
-
-      if (existingResident) {
-        res.status(400).json({ message: 'NIK sudah terdaftar' });
-        return;
-      }
-
-      // Create resident with files
-      const resident = await prisma.resident.create({
-        data: {
-          name,
-          nik,
-          birthPlace,
-          birthDate,
-          gender,
-          address,
-          phone: phone || null,
-          education,
-          schoolName,
-          grade: grade || null,
-          major: major || null,
-          assistance,
-          details: details || null,
-          room: {
-            connect: { id: roomId }  // roomId should already be a number
-          },
-          // Add documents if any
-          documents: {
-            create: [
-              // Add photo if exists
-              ...(files?.photo ? [{
-                name: files.photo[0].originalname,
-                path: `/uploads/${files.photo[0].filename}`,
-                type: 'photo'
-              }] : []),
-              // Add other documents if exist
-              ...(files?.documents ? 
-                files.documents.map(file => ({
-                  name: file.originalname,
-                  path: `/uploads/${file.filename}`,
-                  type: 'document'
-                }))
-                : []
-              )
-            ]
-          }
-        },
-        include: {
-          room: true,
-          documents: true
-        }
-      });
-
-      console.log('Resident created:', resident);
-      res.status(201).json({
-        message: 'Data penghuni berhasil ditambahkan',
-        data: resident
-      });
-
-    } catch (error) {
-      console.error('Error creating resident:', error);
-      res.status(500).json({ 
-        message: 'Gagal menambahkan data penghuni',
-        error: process.env.NODE_ENV === 'development' ? error : undefined
+    // Validasi status
+    if (!Object.values(ResidentStatus).includes(data.status)) {
+      return res.status(400).json({
+        message: `Status tidak valid: ${data.status}`
       });
     }
+
+    // Validasi field berdasarkan status
+    const requiredFields = [
+      'name', 'nik', 'birthPlace', 'birthDate', 'gender',
+      'address', 'education', 'schoolName', 'assistance',
+      'roomId', 'status'
+    ];
+
+    // Tambahkan validasi khusus untuk ALUMNI
+    if (data.status === ResidentStatus.ALUMNI) {
+      requiredFields.push('exitDate', 'alumniNotes');
+    }
+
+    const missingFields = requiredFields.filter(field => !data[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: 'Semua field wajib harus diisi',
+        missingFields
+      });
+    }
+
+    // Format data untuk create
+    const residentData = {
+      name: data.name,
+      nik: data.nik,
+      birthPlace: data.birthPlace,
+      birthDate: data.birthDate,
+      gender: data.gender,
+      address: data.address,
+      phone: data.phone || null,
+      education: data.education,
+      schoolName: data.schoolName,
+      grade: data.grade || null,
+      major: data.major || null,
+      assistance: data.assistance,
+      details: data.details || null,
+      status: data.status as ResidentStatus,
+      createdAt: new Date(),
+      ...(data.status === ResidentStatus.ALUMNI ? {
+        exitDate: new Date(data.exitDate),
+        alumniNotes: data.alumniNotes
+      } : {
+        exitDate: null,
+        alumniNotes: null
+      }),
+      room: {
+        connect: { id: parseInt(data.roomId) }
+      },
+      // Handle file uploads
+      documents: {
+        create: [
+          // Add photo if exists
+          ...(files?.photo ? [{
+            name: files.photo[0].originalname,
+            path: `/uploads/${files.photo[0].filename}`,
+            type: 'photo'
+          }] : []),
+          // Add other documents if exist
+          ...(files?.documents ? 
+            files.documents.map(file => ({
+              name: file.originalname,
+              path: `/uploads/${file.filename}`,
+              type: 'document'
+            }))
+            : []
+          )
+        ]
+      }
+    };
+
+    // Buat resident
+    const resident = await prisma.resident.create({
+      data: residentData,
+      include: {
+        room: true,
+        documents: true
+      }
+    });
+
+    // Kirim response
+    return res.status(201).json({
+      message: 'Data penghuni berhasil ditambahkan',
+      data: {
+        id: resident.id,
+        name: resident.name,
+        status: resident.status,
+        exitDate: resident.exitDate
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating resident:', error);
+    return res.status(400).json({ 
+      message: 'Gagal membuat data penghuni',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
-);
+});
 
 // Rooms routes
 app.get('/api/rooms', async (_req: Request, res: Response) => {
@@ -483,6 +457,10 @@ app.put('/api/residents/:id',
           major: residentData.major || null,
           assistance: residentData.assistance,
           details: residentData.details || null,
+          status: residentData.status as ResidentStatus,
+          createdAt: residentData.createdAt,
+          exitDate: residentData.exitDate ? new Date(residentData.exitDate) : null,
+          alumniNotes: residentData.alumniNotes || null,
           room: {
             connect: { id: parseInt(residentData.roomId) }
           },

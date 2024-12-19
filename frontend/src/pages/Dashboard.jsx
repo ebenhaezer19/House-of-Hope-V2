@@ -53,68 +53,109 @@ const Dashboard = () => {
   // Tambahkan ref untuk chart
   const chartRef = useRef(null);
 
+  // Definisikan warna yang konsisten
+  const chartColors = {
+    active: 'rgb(79, 70, 229)', // Indigo-600 untuk Penghuni Aktif
+    new: 'rgb(34, 197, 94)',    // Green-600 untuk Penghuni Baru
+    alumni: 'rgb(202, 138, 4)'  // Yellow-600 untuk Alumni
+  };
+
   // Fungsi untuk menghitung statistik timeline
   const calculateTimeStats = (residents) => {
-    console.log('Raw residents data:', residents);
+    console.log('Processing residents:', residents.map(r => ({
+      name: r.name,
+      status: r.status,
+      createdAt: r.createdAt,
+      exitDate: r.exitDate
+    })));
 
     // Inisialisasi statistik per bulan
     const monthlyStats = {};
     
+    // Dapatkan rentang waktu
+    const dates = residents.map(r => new Date(r.createdAt));
+    if (residents.filter(r => r.status === 'ALUMNI').length > 0) {
+      // Tambahkan exitDate ke dates untuk alumni
+      const exitDates = residents
+        .filter(r => r.status === 'ALUMNI' && r.exitDate)
+        .map(r => new Date(r.exitDate));
+      dates.push(...exitDates);
+    }
+    
+    const minDate = dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
+    const maxDate = new Date();
+    
+    // Inisialisasi bulan
+    let currentDate = new Date(minDate);
+    while (currentDate <= maxDate) {
+      const monthKey = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+      monthlyStats[monthKey] = { active: 0, new: 0, alumni: 0 };
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    // Proses setiap penghuni
     residents.forEach(resident => {
-      const createdAt = new Date(resident.createdAt);
-      const monthKey = `${createdAt.getFullYear()}-${(createdAt.getMonth() + 1).toString().padStart(2, '0')}`;
-      
-      // Inisialisasi data bulan jika belum ada
-      if (!monthlyStats[monthKey]) {
-        monthlyStats[monthKey] = {
-          active: 0,
-          new: 0,
-          alumni: 0,
-          total: 0
-        };
-      }
+      const startDate = new Date(resident.createdAt);
+      const startKey = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
-      // Hitung berdasarkan status
-      if (resident.status === 'ALUMNI') {
-        // Jika alumni, tambahkan ke bulan keluar
-        if (resident.exitDate) {
-          const exitDate = new Date(resident.exitDate);
-          const exitMonthKey = `${exitDate.getFullYear()}-${(exitDate.getMonth() + 1).toString().padStart(2, '0')}`;
-          
-          if (!monthlyStats[exitMonthKey]) {
-            monthlyStats[exitMonthKey] = {
-              active: 0,
-              new: 0,
-              alumni: 0,
-              total: 0
-            };
+      console.log('Processing resident:', {
+        name: resident.name,
+        status: resident.status,
+        startKey,
+        exitDate: resident.exitDate
+      });
+
+      switch (resident.status) {
+        case 'NEW':
+          monthlyStats[startKey].new++;
+          break;
+
+        case 'ALUMNI':
+          if (resident.exitDate) {
+            const exitDate = new Date(resident.exitDate);
+            const exitKey = `${exitDate.getFullYear()}-${(exitDate.getMonth() + 1).toString().padStart(2, '0')}`;
+            
+            console.log('Alumni processing:', {
+              name: resident.name,
+              exitKey,
+              monthlyStats: monthlyStats[exitKey]
+            });
+
+            // Pastikan exitKey ada dalam monthlyStats
+            if (monthlyStats[exitKey]) {
+              monthlyStats[exitKey].alumni++;
+              
+              // Hitung sebagai aktif dari masuk sampai bulan sebelum keluar
+              let currentDate = new Date(startDate);
+              while (currentDate < exitDate) {
+                const key = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (monthlyStats[key]) {
+                  monthlyStats[key].active++;
+                }
+                currentDate.setMonth(currentDate.getMonth() + 1);
+              }
+            }
           }
-          
-          monthlyStats[exitMonthKey].alumni++;
-          monthlyStats[exitMonthKey].total--;
-        }
-      } else if (resident.status === 'NEW') {
-        monthlyStats[monthKey].new++;
-        monthlyStats[monthKey].total++;
-      } else {
-        monthlyStats[monthKey].active++;
-        monthlyStats[monthKey].total++;
+          break;
+
+        case 'ACTIVE':
+          // Hitung sebagai aktif dari masuk sampai sekarang
+          let currentDate = new Date(startDate);
+          while (currentDate <= maxDate) {
+            const key = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+            if (monthlyStats[key]) {
+              monthlyStats[key].active++;
+            }
+            currentDate.setMonth(currentDate.getMonth() + 1);
+          }
+          break;
       }
     });
 
-    console.log('Monthly stats before sorting:', monthlyStats);
+    console.log('Monthly stats before formatting:', monthlyStats);
 
-    // Sort bulan
+    // Format hasil
     const sortedMonths = Object.keys(monthlyStats).sort();
-
-    // Hitung akumulasi
-    let runningTotal = 0;
-    sortedMonths.forEach(month => {
-      runningTotal += monthlyStats[month].total;
-      monthlyStats[month].active = runningTotal - monthlyStats[month].alumni;
-    });
-
-    // Format hasil akhir
     const result = {
       labels: sortedMonths.map(month => {
         const [year, monthNum] = month.split('-');
@@ -135,13 +176,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        setLoading(true)
-        const response = await api.get('/api/residents')
-        const residentsData = response.data
-        console.log('Raw residents data:', residentsData)
-
-        // Simpan data residents
+        setLoading(true);
+        const response = await api.get('/api/residents');
+        const residentsData = response.data;
+        
+        console.log('Fetched residents data:', residentsData);
         setResidents(residentsData);
+
+        // Hitung statistik timeline
+        const timelineStats = calculateTimeStats(residentsData);
+        setTimeStats({
+          byMonth: timelineStats
+        });
 
         // Hitung statistik
         const statistics = {
@@ -176,22 +222,16 @@ const Dashboard = () => {
         console.log('Calculated stats:', statistics) // Debug log
         setStats(statistics)
 
-        // Tambahkan perhitungan timeline stats
-        const timelineStats = calculateTimeStats(residentsData);
-        setTimeStats({
-          byMonth: timelineStats
-        });
-
       } catch (error) {
-        console.error('Error fetching statistics:', error)
-        setError('Gagal memuat statistik')
+        console.error('Error fetching data:', error);
+        setError('Gagal memuat data');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchStats()
-  }, [])
+    fetchStats();
+  }, []);
 
   // Update useEffect untuk destroy chart sebelum update
   useEffect(() => {
@@ -262,22 +302,22 @@ const Dashboard = () => {
       {
         label: 'Penghuni Aktif',
         data: timeStats.byMonth.active,
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        borderColor: 'rgba(99, 102, 241, 1)',
+        backgroundColor: chartColors.active,
+        borderColor: chartColors.active,
         borderWidth: 1
       },
       {
         label: 'Penghuni Baru',
         data: timeStats.byMonth.new,
-        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-        borderColor: 'rgba(16, 185, 129, 1)',
+        backgroundColor: chartColors.new,
+        borderColor: chartColors.new,
         borderWidth: 1
       },
       {
         label: 'Alumni',
         data: timeStats.byMonth.alumni,
-        backgroundColor: 'rgba(245, 158, 11, 0.8)',
-        borderColor: 'rgba(245, 158, 11, 1)',
+        backgroundColor: chartColors.alumni,
+        borderColor: chartColors.alumni,
         borderWidth: 1
       }
     ]
@@ -289,10 +329,10 @@ const Dashboard = () => {
     maintainAspectRatio: false,
     scales: {
       x: {
-        stacked: true
+        stacked: false
       },
       y: {
-        stacked: true,
+        stacked: false,
         beginAtZero: true,
         ticks: {
           stepSize: 1
@@ -305,7 +345,14 @@ const Dashboard = () => {
       },
       tooltip: {
         mode: 'index',
-        intersect: false
+        intersect: false,
+        callbacks: {
+          label: function(context) {
+            const label = context.dataset.label || '';
+            const value = context.parsed.y || 0;
+            return `${label}: ${value} orang`;
+          }
+        }
       }
     }
   };

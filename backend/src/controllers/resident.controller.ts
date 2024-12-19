@@ -3,6 +3,7 @@ import { ResidentService } from '../services/resident.service'
 import { FileService } from '../services/file.service'
 import { Prisma } from '@prisma/client'
 import { UploadedFile } from '../types/file.types'
+import { ResidentStatus } from '@prisma/client'
 
 const residentService = new ResidentService()
 const fileService = new FileService()
@@ -15,31 +16,18 @@ export class ResidentController {
           id: true,
           name: true,
           status: true,
-          exitDate: true,
           createdAt: true,
+          exitDate: true,
           gender: true,
           education: true,
-          assistance: true,
-          documents: true,
-          room: true
+          assistance: true
         }
       });
-
-      // Debug log untuk memeriksa data
-      console.log('Residents data:', residents.map(r => ({
-        name: r.name,
-        status: r.status,
-        createdAt: r.createdAt,
-        exitDate: r.exitDate
-      })));
 
       res.json(residents);
     } catch (error) {
       console.error('Error fetching residents:', error);
-      res.status(500).json({ 
-        message: 'Gagal mengambil data penghuni',
-        error: process.env.NODE_ENV === 'development' ? error : undefined
-      });
+      res.status(500).json({ message: 'Gagal mengambil data penghuni' });
     }
   }
 
@@ -57,40 +45,67 @@ export class ResidentController {
     try {
       let data = JSON.parse(req.body.data);
       
-      // Pastikan status dan exitDate diproses dengan benar
+      // Validasi status
+      if (!Object.values(ResidentStatus).includes(data.status)) {
+        throw new Error(`Status tidak valid: ${data.status}`);
+      }
+
+      // Format data dengan status yang benar
       const residentData = {
-        ...data,
+        name: data.name,
+        nik: data.nik,
+        birthPlace: data.birthPlace,
+        birthDate: data.birthDate,
+        gender: data.gender,
+        address: data.address,
+        phone: data.phone || null,
+        education: data.education,
+        schoolName: data.schoolName,
+        grade: data.grade || null,
+        major: data.major || null,
+        assistance: data.assistance,
+        details: data.details || null,
         roomId: parseInt(data.roomId),
-        status: data.status || 'ACTIVE',
-        // Konversi exitDate ke Date jika ada
-        exitDate: data.status === 'ALUMNI' && data.exitDate ? new Date(data.exitDate) : null,
-        alumniNotes: data.status === 'ALUMNI' ? data.alumniNotes : null
+        status: data.status as ResidentStatus,
+        createdAt: new Date(data.createdAt),
+        ...(data.status === ResidentStatus.ALUMNI ? {
+          exitDate: new Date(data.exitDate),
+          alumniNotes: data.alumniNotes
+        } : {
+          exitDate: null,
+          alumniNotes: null
+        })
       };
 
-      console.log('Creating resident with data:', residentData);
+      console.log('Creating resident with data:', {
+        name: residentData.name,
+        status: residentData.status,
+        exitDate: residentData.exitDate
+      });
 
       const resident = await prisma.resident.create({
-        data: {
-          ...residentData,
-          room: {
-            connect: { id: residentData.roomId }
-          },
-          documents: {
-            create: documents
-          }
-        },
+        data: residentData,
         include: {
-          room: true,
-          documents: true
+          room: true
         }
       });
 
-      res.status(201).json(resident);
+      // Kirim response yang lebih sederhana
+      res.status(201).json({
+        message: 'Data penghuni berhasil ditambahkan',
+        data: {
+          id: resident.id,
+          name: resident.name,
+          status: resident.status,
+          exitDate: resident.exitDate
+        }
+      });
+
     } catch (error) {
       console.error('Error creating resident:', error);
       res.status(400).json({ 
-        message: error.message || 'Gagal membuat data penghuni',
-        error: process.env.NODE_ENV === 'development' ? error : undefined
+        message: 'Gagal membuat data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }

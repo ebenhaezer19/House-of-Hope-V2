@@ -12,8 +12,8 @@ const api = axios.create({
 api.interceptors.request.use(
   config => {
     console.log('API Request:', {
-      method: config.method,
       url: config.url,
+      method: config.method,
       data: config.data
     });
     return config;
