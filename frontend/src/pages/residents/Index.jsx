@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import { Alert } from '../../components/shared'
 import defaultAvatar from '../../assets/default-avatar.png';
 
-const Residents = () => {
+const ResidentIndex = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const [successMessage, setSuccessMessage] = useState(location.state?.message)
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,6 +15,7 @@ const Residents = () => {
   const [downloadingDoc, setDownloadingDoc] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const filterStatus = location.state?.filterStatus;
 
   useEffect(() => {
     if (successMessage) {
@@ -26,22 +28,29 @@ const Residents = () => {
   }, [successMessage])
 
   useEffect(() => {
-    fetchResidents()
-  }, [])
+    const fetchResidents = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/residents');
+        let filteredData = response.data;
 
-  const fetchResidents = async () => {
-    try {
-      setLoading(true)
-      const response = await api.get('/api/residents')
-      console.log('Response:', response.data)
-      setResidents(response.data)
-    } catch (error) {
-      console.error('Error fetching residents:', error)
-      setError('Gagal mengambil data penghuni')
-    } finally {
-      setLoading(false)
-    }
-  }
+        // Terapkan filter jika ada
+        if (filterStatus) {
+          filteredData = filteredData.filter(resident => 
+            resident.status === filterStatus
+          );
+        }
+
+        setResidents(filteredData);
+      } catch (error) {
+        setError('Gagal memuat data penghuni');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResidents();
+  }, [filterStatus]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
@@ -118,15 +127,47 @@ const Residents = () => {
     }
   }
 
+  // Tambahkan fungsi untuk mendapatkan label status
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'ACTIVE': return 'Penghuni Aktif';
+      case 'NEW': return 'Penghuni Baru';
+      case 'ALUMNI': return 'Alumni';
+      default: return 'Semua Penghuni';
+    }
+  };
+
+  // Tambahkan fungsi untuk clear filter
+  const clearFilter = () => {
+    navigate('/dashboard/residents', { replace: true });
+  };
+
   if (loading) {
     return <div className="text-center py-10">Memuat data...</div>
   }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header dengan info filter */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Daftar Penghuni</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {filterStatus ? getStatusLabel(filterStatus) : 'Daftar Penghuni'}
+          </h1>
+          {filterStatus && (
+            <div className="mt-1 flex items-center">
+              <span className="text-sm text-gray-500">
+                Menampilkan {getStatusLabel(filterStatus)} saja
+              </span>
+              <button
+                onClick={clearFilter}
+                className="ml-2 text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                Lihat semua
+              </button>
+            </div>
+          )}
+        </div>
         <Link
           to="/dashboard/residents/create"
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -135,6 +176,7 @@ const Residents = () => {
         </Link>
       </div>
 
+      {/* Alert messages */}
       {successMessage && (
         <Alert type="success" message={successMessage} />
       )}
@@ -169,6 +211,9 @@ const Residents = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Dokumen
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aksi
@@ -254,6 +299,17 @@ const Residents = () => {
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      resident.status === 'ACTIVE' 
+                        ? 'bg-indigo-100 text-indigo-800'
+                        : resident.status === 'NEW'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {getStatusLabel(resident.status)}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">
                       <Link
@@ -283,8 +339,20 @@ const Residents = () => {
           </table>
         </div>
       </div>
+
+      {/* Tampilkan pesan jika tidak ada data */}
+      {residents.length === 0 && (
+        <div className="text-center py-10 bg-gray-50 rounded-lg">
+          <p className="text-gray-500">
+            {filterStatus 
+              ? `Tidak ada ${getStatusLabel(filterStatus).toLowerCase()} saat ini`
+              : 'Tidak ada data penghuni'
+            }
+          </p>
+        </div>
+      )}
     </div>
   )
 }
 
-export default Residents
+export default ResidentIndex

@@ -393,6 +393,13 @@ const Dashboard = () => {
     }
   };
 
+  // Tambahkan fungsi untuk handle klik
+  const handleStatusClick = (status) => {
+    navigate('/dashboard/residents', { 
+      state: { filterStatus: status }
+    });
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="text-lg text-gray-600">Memuat statistik...</div>
@@ -497,35 +504,47 @@ const Dashboard = () => {
         </div>
 
         <Card className="p-6">
-          <h3 className="text-lg font-medium mb-6">Statistik Timeline Penghuni</h3>
+          <h3 className="text-lg font-medium mb-6">Status Penghuni</h3>
           
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="text-center p-6 bg-indigo-50 rounded-lg">
+          <div className="grid grid-cols-3 gap-6">
+            <button 
+              onClick={() => handleStatusClick('ACTIVE')}
+              className="text-center p-6 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors duration-150"
+            >
               <h4 className="text-sm font-medium text-indigo-600 mb-2">Penghuni Aktif</h4>
               <p className="text-2xl font-bold text-indigo-600">
                 {residents.filter(r => r.status === 'ACTIVE').length}
               </p>
-            </div>
-            <div className="text-center p-6 bg-green-50 rounded-lg">
-              <h4 className="text-sm font-medium text-green-600">Penghuni Baru</h4>
+              <span className="text-sm text-indigo-500 mt-2 block">
+                Klik untuk lihat detail
+              </span>
+            </button>
+
+            <button 
+              onClick={() => handleStatusClick('NEW')}
+              className="text-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-150"
+            >
+              <h4 className="text-sm font-medium text-green-600 mb-2">Penghuni Baru</h4>
               <p className="text-2xl font-bold text-green-600">
                 {residents.filter(r => r.status === 'NEW').length}
               </p>
-            </div>
-            <div className="text-center p-6 bg-yellow-50 rounded-lg">
-              <h4 className="text-sm font-medium text-yellow-600">Alumni</h4>
+              <span className="text-sm text-green-500 mt-2 block">
+                Klik untuk lihat detail
+              </span>
+            </button>
+
+            <button 
+              onClick={() => handleStatusClick('ALUMNI')}
+              className="text-center p-6 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-150"
+            >
+              <h4 className="text-sm font-medium text-yellow-600 mb-2">Alumni</h4>
               <p className="text-2xl font-bold text-yellow-600">
                 {residents.filter(r => r.status === 'ALUMNI').length}
               </p>
-            </div>
-          </div>
-
-          <div className="h-[300px]">
-            <Bar 
-              ref={chartRef}
-              data={timelineChartData} 
-              options={timelineChartOptions}
-            />
+              <span className="text-sm text-yellow-500 mt-2 block">
+                Klik untuk lihat detail
+              </span>
+            </button>
           </div>
         </Card>
       </div>
