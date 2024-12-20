@@ -1,40 +1,57 @@
+import { Dialog, Transition } from '@headlessui/react'
+import { Fragment } from 'react'
+import { XMarkIcon } from '@heroicons/react/24/outline'
+
 const ImageModal = ({ isOpen, onClose, imageUrl }) => {
-  if (!isOpen) return null;
-
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="relative max-w-4xl max-h-[90vh] w-full">
-        <button
-          onClick={onClose}
-          className="absolute -top-4 -right-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100"
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-6 w-6" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M6 18L18 6M6 6l12 12" 
-            />
-          </svg>
-        </button>
-        <img
-          src={imageUrl}
-          alt="Preview"
-          className="w-full h-full object-contain rounded-lg"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
-    </div>
-  );
-};
+          <div className="fixed inset-0 bg-black bg-opacity-75" />
+        </Transition.Child>
 
-export default ImageModal; 
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="relative max-w-3xl w-full">
+                {/* Close button */}
+                <button
+                  onClick={onClose}
+                  className="absolute -top-2 -right-2 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+
+                {/* Image */}
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full h-auto rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  )
+}
+
+export default ImageModal 

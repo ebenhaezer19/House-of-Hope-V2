@@ -11,6 +11,7 @@ import {
   FileUpload
 } from '../../components/shared'
 import { DocumentIcon } from '@heroicons/react/24/outline'
+import ImageModal from '../../components/shared/ImageModal'
 
 const EditResident = () => {
   const { id } = useParams()
@@ -72,6 +73,9 @@ const EditResident = () => {
     exitDate: '',
     alumniNotes: ''
   })
+
+  // Tambahkan state untuk modal
+  const [showImageModal, setShowImageModal] = useState(false)
 
   // Fetch rooms data
   useEffect(() => {
@@ -467,15 +471,25 @@ const EditResident = () => {
         <Card>
           <h3 className="text-lg font-medium mb-4">Dokumen</h3>
           
-          {/* Existing photo */}
+          {/* Existing photo with click handler */}
           {files.existingPhoto && (
             <div className="mb-4">
               <p className="text-sm text-gray-500 mb-2">Foto saat ini:</p>
-              <img
-                src={`${import.meta.env.VITE_API_URL}${files.existingPhoto.path}`}
-                alt="Foto penghuni"
-                className="w-32 h-32 object-cover rounded-lg"
-              />
+              <div 
+                className="relative w-32 h-32 cursor-pointer group"
+                onClick={() => setShowImageModal(true)}
+              >
+                <img
+                  src={`${import.meta.env.VITE_API_URL}${files.existingPhoto.path}`}
+                  alt="Foto penghuni"
+                  className="w-full h-full object-cover rounded-lg transition-opacity group-hover:opacity-75"
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                    Klik untuk perbesar
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -531,6 +545,13 @@ const EditResident = () => {
           </Button>
         </div>
       </form>
+
+      {/* Add ImageModal */}
+      <ImageModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        imageUrl={files.existingPhoto ? `${import.meta.env.VITE_API_URL}${files.existingPhoto.path}` : ''}
+      />
     </div>
   )
 }
