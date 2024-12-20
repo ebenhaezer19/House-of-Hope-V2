@@ -8,14 +8,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Types for multer
-interface FileRequest extends Request {
-  files: {
-    [key: string]: Express.Multer.File[];
-  };
-}
-
-// Di bagian atas file, tambahkan interface untuk AuthRequest
+// Di bagian atas file, hanya definisikan interface yang digunakan
 interface AuthRequest extends Request {
   user?: {
     userId: number;
@@ -26,7 +19,6 @@ interface AuthRequest extends Request {
 
 const app = express();
 const prisma = new PrismaClient();
-const PORT = 5002;
 
 // CORS configuration
 const corsOptions = {
@@ -40,11 +32,30 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Logging middleware
-app.use((_req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${_req.method} ${_req.url}`);
-  next();
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: './uploads',
+  filename: (_req, file: Express.Multer.File, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    cb(null, `${file.fieldname}-${uniqueSuffix}-${file.originalname}`);
+  }
 });
+
+const upload = multer({ storage });
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static files
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+  }
+}));
 
 // Auth routes
 app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> => {
@@ -144,31 +155,21 @@ app.get('/api/residents', async (_req: Request, res: Response) => {
   }
 });
 
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: './uploads',
-    filename: (_req, file: Express.Multer.File, cb) => {
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-      cb(null, `${file.fieldname}-${uniqueSuffix}-${file.originalname}`);
-    }
-  })
-});
-
 // Create resident
 app.post('/api/residents', upload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'documents', maxCount: 5 }
-]), async (req: Request, res: Response) => {
+]), async (req: Request, res: Response): Promise<void> => {
   try {
     const data = JSON.parse(req.body.data);
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     // Validasi status
     if (!Object.values(ResidentStatus).includes(data.status)) {
-      return res.status(400).json({
+      res.status(400).json({
         message: `Status tidak valid: ${data.status}`
       });
+      return;
     }
 
     // Validasi field berdasarkan status
@@ -186,10 +187,24 @@ app.post('/api/residents', upload.fields([
     const missingFields = requiredFields.filter(field => !data[field]);
 
     if (missingFields.length > 0) {
-      return res.status(400).json({
+      res.status(400).json({
         message: 'Semua field wajib harus diisi',
         missingFields
       });
+      return;
+    }
+
+    // Cek apakah NIK sudah ada
+    const existingResident = await prisma.resident.findUnique({
+      where: { nik: data.nik }
+    });
+
+    if (existingResident) {
+      res.status(400).json({
+        message: 'NIK sudah terdaftar',
+        error: 'DUPLICATE_NIK'
+      });
+      return;
     }
 
     // Format data untuk create
@@ -219,16 +234,13 @@ app.post('/api/residents', upload.fields([
       room: {
         connect: { id: parseInt(data.roomId) }
       },
-      // Handle file uploads
       documents: {
         create: [
-          // Add photo if exists
           ...(files?.photo ? [{
             name: files.photo[0].originalname,
             path: `/uploads/${files.photo[0].filename}`,
             type: 'photo'
           }] : []),
-          // Add other documents if exist
           ...(files?.documents ? 
             files.documents.map(file => ({
               name: file.originalname,
@@ -251,7 +263,7 @@ app.post('/api/residents', upload.fields([
     });
 
     // Kirim response
-    return res.status(201).json({
+    res.status(201).json({
       message: 'Data penghuni berhasil ditambahkan',
       data: {
         id: resident.id,
@@ -260,13 +272,25 @@ app.post('/api/residents', upload.fields([
         exitDate: resident.exitDate
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error creating resident:', error);
-    return res.status(400).json({ 
+    
+    // Handle Prisma errors
+    if (error.code === 'P2002' && error.meta?.target?.includes('nik')) {
+      res.status(400).json({
+        message: 'NIK sudah terdaftar',
+        error: 'DUPLICATE_NIK'
+      });
+      return;
+    }
+
+    res.status(500).json({ 
       message: 'Gagal membuat data penghuni',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+    return;
   }
 });
 
@@ -343,29 +367,6 @@ app.get('/api/rooms/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Serve static files
-app.use('/uploads', express.static(uploadsDir, {
-  // Set proper headers
-  setHeaders: (res, path) => {
-    // Enable CORS for images
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    // Set cache control
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    // Set content type for images
-    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
-      res.setHeader('Content-Type', 'image/jpeg');
-    } else if (path.endsWith('.png')) {
-      res.setHeader('Content-Type', 'image/png');
-    }
-  }
-}));
-
 // Get single resident
 app.get('/api/residents/:id', async (req: Request, res: Response) => {
   try {
@@ -394,101 +395,139 @@ app.get('/api/residents/:id', async (req: Request, res: Response) => {
 });
 
 // Update resident
-app.put('/api/residents/:id', 
-  upload.fields([
-    { name: 'photo', maxCount: 1 },
-    { name: 'documents', maxCount: 5 }
-  ]) as express.RequestHandler,
-  async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const files = (req as FileRequest).files;
-      const residentData = JSON.parse(req.body.data);
+app.put('/api/residents/:id', upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'documents', maxCount: 5 }
+]), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const data = JSON.parse(req.body.data);
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      // Validate resident exists
-      const existingResident = await prisma.resident.findUnique({
-        where: { id },
-        include: { documents: true }
+    // Validasi status
+    if (!Object.values(ResidentStatus).includes(data.status)) {
+      res.status(400).json({
+        message: `Status tidak valid: ${data.status}`
       });
+      return;
+    }
 
-      if (!existingResident) {
-        res.status(404).json({ message: 'Penghuni tidak ditemukan' });
-        return;
-      }
+    // Validasi field berdasarkan status
+    const requiredFields = [
+      'name', 'nik', 'birthPlace', 'birthDate', 'gender',
+      'address', 'education', 'schoolName', 'assistance',
+      'roomId', 'status'
+    ];
 
-      // Handle file uploads
-      const documents = [];
-      
-      // Handle photo
-      if (files?.photo) {
-        const photo = files.photo[0];
-        documents.push({
-          name: photo.originalname,
-          path: `/uploads/${photo.filename}`,
-          type: 'photo'
-        });
-      }
+    // Tambahkan validasi khusus untuk ALUMNI
+    if (data.status === ResidentStatus.ALUMNI) {
+      requiredFields.push('exitDate', 'alumniNotes');
+    }
 
-      // Handle other documents
-      if (files?.documents) {
-        files.documents.forEach(file => {
-          documents.push({
-            name: file.originalname,
-            path: `/uploads/${file.filename}`,
-            type: 'document'
-          });
-        });
-      }
+    const missingFields = requiredFields.filter(field => !data[field]);
 
-      // Update resident
-      const updatedResident = await prisma.resident.update({
-        where: { id },
-        data: {
-          name: residentData.name,
-          nik: residentData.nik,
-          birthPlace: residentData.birthPlace,
-          birthDate: residentData.birthDate,
-          gender: residentData.gender,
-          address: residentData.address,
-          phone: residentData.phone || null,
-          education: residentData.education,
-          schoolName: residentData.schoolName,
-          grade: residentData.grade || null,
-          major: residentData.major || null,
-          assistance: residentData.assistance,
-          details: residentData.details || null,
-          status: residentData.status as ResidentStatus,
-          createdAt: residentData.createdAt,
-          exitDate: residentData.exitDate ? new Date(residentData.exitDate) : null,
-          alumniNotes: residentData.alumniNotes || null,
-          room: {
-            connect: { id: parseInt(residentData.roomId) }
-          },
-          // Add new documents if any
-          documents: documents.length > 0 ? {
-            create: documents
-          } : undefined
-        },
-        include: {
-          room: true,
-          documents: true
+    if (missingFields.length > 0) {
+      res.status(400).json({
+        message: 'Semua field wajib harus diisi',
+        missingFields
+      });
+      return;
+    }
+
+    // Cek apakah resident exists
+    const existingResident = await prisma.resident.findUnique({
+      where: { id: Number(id) },
+      include: { documents: true }
+    });
+
+    if (!existingResident) {
+      res.status(404).json({ message: 'Penghuni tidak ditemukan' });
+      return;
+    }
+
+    // Cek NIK duplikat hanya jika NIK berubah
+    if (data.nik !== existingResident.nik) {
+      const duplicateNik = await prisma.resident.findFirst({
+        where: {
+          nik: data.nik,
+          id: { not: Number(id) }
         }
       });
 
-      res.json({
-        message: 'Data penghuni berhasil diperbarui',
-        data: updatedResident
-      });
-
-    } catch (error) {
-      console.error('Error updating resident:', error);
-      res.status(500).json({ 
-        message: 'Gagal memperbarui data penghuni',
-        error: process.env.NODE_ENV === 'development' ? error : undefined
-      });
+      if (duplicateNik) {
+        res.status(400).json({
+          message: 'NIK sudah terdaftar',
+          error: 'DUPLICATE_NIK'
+        });
+        return;
+      }
     }
+
+    // Update resident
+    const resident = await prisma.resident.update({
+      where: { id: Number(id) },
+      data: {
+        name: data.name,
+        nik: data.nik,
+        birthPlace: data.birthPlace,
+        birthDate: data.birthDate,
+        gender: data.gender,
+        address: data.address,
+        phone: data.phone || null,
+        education: data.education,
+        schoolName: data.schoolName,
+        grade: data.grade || null,
+        major: data.major || null,
+        assistance: data.assistance,
+        details: data.details || null,
+        status: data.status as ResidentStatus,
+        exitDate: data.exitDate ? new Date(data.exitDate) : null,
+        alumniNotes: data.alumniNotes || null,
+        room: {
+          connect: { id: parseInt(data.roomId) }
+        },
+        // Hanya tambah dokumen baru jika ada
+        ...(files && Object.keys(files).length > 0 ? {
+          documents: {
+            create: [
+              ...(files?.photo ? [{
+                name: files.photo[0].originalname,
+                path: `/uploads/${files.photo[0].filename}`,
+                type: 'photo'
+              }] : []),
+              ...(files?.documents ? 
+                files.documents.map(file => ({
+                  name: file.originalname,
+                  path: `/uploads/${file.filename}`,
+                  type: 'document'
+                }))
+                : []
+              )
+            ]
+          }
+        } : {})
+      },
+      include: {
+        room: true,
+        documents: true
+      }
+    });
+
+    res.json({
+      message: 'Data penghuni berhasil diperbarui',
+      data: resident
+    });
+    return;
+
+  } catch (error) {
+    console.error('Error updating resident:', error);
+    res.status(500).json({ 
+      message: 'Gagal memperbarui data penghuni',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+    return;
   }
-);
+});
 
 // Auth middleware
 const authMiddleware = async (req: AuthRequest, res: Response, next: Function) => {
@@ -712,7 +751,9 @@ app.delete('/api/payments/:id', async (req: Request, res: Response) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
+const PORT = process.env.PORT || 5002;
+
+app.listen(PORT, () => {
   console.log('=================================');
   console.log(`Server is running on port ${PORT}`);
   console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
@@ -730,8 +771,7 @@ const server = app.listen(PORT, () => {
 process.on('SIGTERM', async () => {
   console.log('Shutting down...');
   await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+  process.exit(0);
 });
+
+export default app;

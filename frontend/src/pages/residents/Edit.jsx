@@ -10,7 +10,7 @@ import {
   Textarea,
   FileUpload
 } from '../../components/shared'
-import ImageModal from '../../components/shared/ImageModal'
+import { DocumentIcon } from '@heroicons/react/24/outline'
 
 const EditResident = () => {
   const { id } = useParams()
@@ -20,10 +20,37 @@ const EditResident = () => {
   const [rooms, setRooms] = useState([])
   const [loadingRooms, setLoadingRooms] = useState(true)
   
-  // Tambahkan state untuk files
+  // Master data untuk opsi-opsi
+  const [masterData] = useState({
+    statuses: [
+      { value: 'NEW', label: 'Penghuni Baru' },
+      { value: 'ACTIVE', label: 'Penghuni Aktif' },
+      { value: 'ALUMNI', label: 'Alumni' }
+    ],
+    genders: [
+      { value: 'MALE', label: 'Laki-laki' },
+      { value: 'FEMALE', label: 'Perempuan' }
+    ],
+    educations: [
+      { value: 'TK', label: 'TK' },
+      { value: 'SD', label: 'SD' },
+      { value: 'SMP', label: 'SMP' },
+      { value: 'SMA', label: 'SMA' },
+      { value: 'KULIAH', label: 'Kuliah' },
+      { value: 'MAGANG', label: 'Magang' }
+    ],
+    assistanceTypes: [
+      { value: 'YAYASAN', label: 'Yayasan' },
+      { value: 'DIAKONIA', label: 'Diakonia' }
+    ]
+  })
+
+  // State untuk files
   const [files, setFiles] = useState({
     photo: null,
-    documents: []
+    documents: [],
+    existingPhoto: null,
+    existingDocuments: []
   })
 
   const [formData, setFormData] = useState({
@@ -34,11 +61,11 @@ const EditResident = () => {
     gender: '',
     address: '',
     phone: '',
-    education: 'SD',
+    education: '',
     schoolName: '',
     grade: '',
     major: '',
-    assistance: 'YAYASAN',
+    assistance: '',
     details: '',
     roomId: '',
     status: '',
@@ -46,23 +73,30 @@ const EditResident = () => {
     alumniNotes: ''
   })
 
-  const [showImageModal, setShowImageModal] = useState(false)
-  const [previewImage, setPreviewImage] = useState(null)
+  // Fetch rooms data
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoadingRooms(true)
+        const response = await api.get('/api/rooms')
+        
+        const availableRooms = response.data.map(room => ({
+          value: room.id.toString(),
+          label: `${room.number} - Lantai ${room.floor} (${room.capacity} tempat)`,
+          isDisabled: false // Biarkan semua kamar bisa dipilih untuk edit
+        }))
 
-  // Fungsi untuk mendapatkan URL foto
-  const getPhotoUrl = (resident) => {
-    try {
-      const photoDoc = resident.documents?.find(doc => doc.type === 'photo')
-      if (photoDoc?.path) {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-        return `${baseUrl}${photoDoc.path}`
+        setRooms(availableRooms)
+      } catch (error) {
+        console.error('Error fetching rooms:', error)
+        setError('Gagal memuat data kamar')
+      } finally {
+        setLoadingRooms(false)
       }
-      return null
-    } catch (error) {
-      console.error('Error getting photo URL:', error)
-      return null
     }
-  }
+
+    fetchRooms()
+  }, [])
 
   // Fetch resident data
   useEffect(() => {
@@ -71,8 +105,7 @@ const EditResident = () => {
         setLoading(true)
         const response = await api.get(`/api/residents/${id}`)
         const resident = response.data
-        
-        // Transform data untuk form
+
         setFormData({
           name: resident.name,
           nik: resident.nik,
@@ -93,15 +126,19 @@ const EditResident = () => {
           alumniNotes: resident.alumniNotes || ''
         })
 
-        // Set preview image jika ada foto
-        const photoUrl = getPhotoUrl(resident)
-        if (photoUrl) {
-          setPreviewImage(photoUrl)
-        }
+        // Set existing files
+        const existingPhoto = resident.documents?.find(doc => doc.type === 'photo')
+        const existingDocs = resident.documents?.filter(doc => doc.type === 'document')
+
+        setFiles(prev => ({
+          ...prev,
+          existingPhoto,
+          existingDocuments: existingDocs || []
+        }))
 
       } catch (error) {
         console.error('Error fetching resident:', error)
-        setError('Gagal mengambil data penghuni')
+        setError('Gagal memuat data penghuni')
       } finally {
         setLoading(false)
       }
@@ -110,404 +147,390 @@ const EditResident = () => {
     fetchResident()
   }, [id])
 
-  // Fetch rooms
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setLoadingRooms(true)
-        const response = await api.get('/api/rooms')
-        
-        // Transform data untuk select options
-        const roomOptions = response.data.map(room => ({
-          value: room.id.toString(),
-          label: `${room.number} - Lantai ${room.floor} (${room.availableSpace}/${room.capacity} tempat tersedia)${room.availableSpace === 0 ? ' - PENUH' : ''}`,
-          isDisabled: room.availableSpace === 0  // Disable option jika penuh
-        }))
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'status' && value !== 'ALUMNI' ? {
+        exitDate: '',
+        alumniNotes: ''
+      } : {})
+    }))
+  }
 
-        setRooms(roomOptions)
-        
-        // Set warning jika semua kamar penuh
-        if (roomOptions.every(room => room.isDisabled)) {
-          setError('Semua kamar sudah penuh')
-        }
-
-      } catch (error) {
-        console.error('Error fetching rooms:', error)
-        setError('Gagal mengambil data kamar')
-      } finally {
-        setLoadingRooms(false)
-      }
-    }
-
-    fetchRooms()
-  }, [])
-
-  // Handle file changes
   const handleFileChange = (e) => {
-    const { name, files: uploadedFiles } = e.target
-    
+    const { name, files } = e.target
     if (name === 'photo') {
-      const file = uploadedFiles[0]
       setFiles(prev => ({
         ...prev,
-        photo: file
+        photo: files[0]
       }))
-      // Create URL for preview
-      setPreviewImage(URL.createObjectURL(file))
     } else if (name === 'documents') {
-      // Validasi tipe file
-      const validFiles = Array.from(uploadedFiles).filter(file => {
-        const validTypes = ['.pdf', '.doc', '.docx']
-        return validTypes.some(type => file.name.toLowerCase().endsWith(type))
-      })
-
-      if (validFiles.length !== uploadedFiles.length) {
-        setError('Beberapa file tidak valid. Hanya file PDF dan DOC yang diperbolehkan.')
-        return
-      }
-
       setFiles(prev => ({
         ...prev,
-        documents: validFiles
+        documents: Array.from(files)
       }))
     }
   }
 
+  // Tambahkan handleSubmit
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const formDataToSend = new FormData()
-      
-      // Tambahkan validasi untuk alumni
+      // Validasi NIK
+      if (formData.nik.length !== 16) {
+        throw new Error('NIK harus 16 digit');
+      }
+
+      // Validasi format NIK (hanya angka)
+      if (!/^\d+$/.test(formData.nik)) {
+        throw new Error('NIK hanya boleh berisi angka');
+      }
+
+      // Validasi khusus untuk alumni
       if (formData.status === 'ALUMNI') {
-        if (!formData.exitDate) {
-          setError('Tanggal keluar harus diisi untuk alumni')
-          return
-        }
-        if (!formData.alumniNotes) {
-          setError('Keterangan alumni harus diisi')
-          return
+        if (!formData.exitDate || !formData.alumniNotes) {
+          throw new Error('Mohon lengkapi data alumni');
         }
       }
 
-      // Siapkan data untuk dikirim
-      const residentData = {
-        ...formData,
-        roomId: parseInt(formData.roomId),
-        exitDate: formData.status === 'ALUMNI' ? formData.exitDate : null,
-        alumniNotes: formData.status === 'ALUMNI' ? formData.alumniNotes : null
-      }
-
-      formDataToSend.append('data', JSON.stringify(residentData))
+      // Siapkan FormData untuk upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('data', JSON.stringify(formData));
       
-      // Handle file uploads jika ada
+      // Tambahkan file baru jika ada
       if (files.photo) {
-        formDataToSend.append('photo', files.photo)
+        formDataToSend.append('photo', files.photo);
       }
       
       if (files.documents.length > 0) {
         files.documents.forEach(doc => {
-          formDataToSend.append('documents', doc)
-        })
+          formDataToSend.append('documents', doc);
+        });
       }
 
-      await api.put(`/api/residents/${id}`, formDataToSend)
+      // Kirim ke API
+      await api.put(`/api/residents/${id}`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
 
-      navigate('/dashboard/residents', { 
+      // Redirect dengan pesan sukses
+      navigate('/dashboard/residents', {
         state: { message: 'Data penghuni berhasil diperbarui' }
-      })
+      });
 
     } catch (error) {
-      console.error('Error updating resident:', error)
-      setError(error.response?.data?.message || 'Gagal memperbarui data penghuni')
+      console.error('Error updating resident:', error);
+      
+      // Handle specific errors
+      if (error.response?.data?.error?.includes('Unique constraint failed')) {
+        setError('NIK sudah terdaftar. Silakan gunakan NIK lain.');
+      } else {
+        setError(error.response?.data?.message || error.message);
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>
   }
 
-  // Render form fields (sama seperti Form.jsx)
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Edit Penghuni</h2>
+
       {error && (
-        <Alert
-          type="error"
-          title="Error"
-          message={error}
-        />
+        <Alert type="error" message={error} />
       )}
 
-      <Card title="Edit Data Penghuni">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Data Pribadi */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Data Pribadi</h3>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input
-                label="Nama Lengkap"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
-                required
-              />
-              <Input
-                label="NIK"
-                value={formData.nik}
-                onChange={(e) => setFormData(prev => ({...prev, nik: e.target.value}))}
-                required
-              />
-              <Input
-                label="Tempat Lahir"
-                value={formData.birthPlace}
-                onChange={(e) => setFormData(prev => ({...prev, birthPlace: e.target.value}))}
-                required
-              />
-              <Input
-                type="date"
-                label="Tanggal Lahir"
-                value={formData.birthDate}
-                onChange={(e) => setFormData(prev => ({...prev, birthDate: e.target.value}))}
-                required
-              />
-              <Select
-                label="Jenis Kelamin"
-                value={formData.gender}
-                onChange={(e) => setFormData(prev => ({...prev, gender: e.target.value}))}
-                options={[
-                  { value: 'MALE', label: 'Laki-laki' },
-                  { value: 'FEMALE', label: 'Perempuan' }
-                ]}
-                required
-              />
-              <Input
-                label="No. Telepon"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({...prev, phone: e.target.value}))}
-              />
-            </div>
-            <Textarea
-              label="Alamat Lengkap"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({...prev, address: e.target.value}))}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Data Pribadi */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Data Pribadi</h3>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <Input
+              label="Nama Lengkap"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
               required
+            />
+            
+            <Input
+              label="NIK"
+              name="nik"
+              value={formData.nik}
+              onChange={handleChange}
+              required
+              maxLength={16}
+            />
+
+            <Input
+              label="Tempat Lahir"
+              name="birthPlace"
+              value={formData.birthPlace}
+              onChange={handleChange}
+              required
+            />
+
+            <Input
+              type="date"
+              label="Tanggal Lahir"
+              name="birthDate"
+              value={formData.birthDate}
+              onChange={handleChange}
+              required
+            />
+
+            <Select
+              label="Jenis Kelamin"
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Pilih Jenis Kelamin</option>
+              {masterData.genders.map(gender => (
+                <option key={gender.value} value={gender.value}>
+                  {gender.label}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              label="No. Telepon"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
             />
           </div>
 
-          {/* Data Pendidikan */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Data Pendidikan</h3>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Select
-                label="Jenjang Pendidikan"
-                value={formData.education}
-                onChange={(e) => setFormData(prev => ({...prev, education: e.target.value}))}
-                options={[
-                  { value: 'TK', label: 'TK' },
-                  { value: 'SD', label: 'SD' },
-                  { value: 'SMP', label: 'SMP' },
-                  { value: 'SMA', label: 'SMA' },
-                  { value: 'KULIAH', label: 'Kuliah' },
-                  { value: 'MAGANG', label: 'Magang' }
-                ]}
-                required
-              />
-              <Input
-                label="Nama Sekolah"
-                value={formData.schoolName}
-                onChange={(e) => setFormData(prev => ({...prev, schoolName: e.target.value}))}
-                required
-              />
-              <Input
-                label="Kelas/Tingkat"
-                value={formData.grade}
-                onChange={(e) => setFormData(prev => ({...prev, grade: e.target.value}))}
-              />
-              <Input
-                label="Jurusan"
-                value={formData.major}
-                onChange={(e) => setFormData(prev => ({...prev, major: e.target.value}))}
-              />
-            </div>
+          <div className="mt-4">
+            <Textarea
+              label="Alamat Lengkap"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+            />
           </div>
+        </Card>
 
-          {/* Data Bantuan */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Data Bantuan</h3>
-            <div className="grid grid-cols-1 gap-6">
-              <Select
-                label="Jenis Bantuan"
-                value={formData.assistance}
-                onChange={(e) => setFormData(prev => ({...prev, assistance: e.target.value}))}
-                options={[
-                  { value: 'YAYASAN', label: 'Yayasan' },
-                  { value: 'DIAKONIA', label: 'Diakonia' }
-                ]}
-                required
-              />
-              <Textarea
-                label="Detail Bantuan"
-                value={formData.details}
-                onChange={(e) => setFormData(prev => ({...prev, details: e.target.value}))}
-              />
-            </div>
+        {/* Data Pendidikan */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Data Pendidikan</h3>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <Select
+              label="Jenjang Pendidikan"
+              name="education"
+              value={formData.education}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Pilih Jenjang</option>
+              {masterData.educations.map(edu => (
+                <option key={edu.value} value={edu.value}>
+                  {edu.label}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              label="Nama Sekolah"
+              name="schoolName"
+              value={formData.schoolName}
+              onChange={handleChange}
+              required
+            />
+
+            <Input
+              label="Kelas/Tingkat"
+              name="grade"
+              value={formData.grade}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Jurusan"
+              name="major"
+              value={formData.major}
+              onChange={handleChange}
+            />
           </div>
+        </Card>
 
-          {/* Kamar */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Penempatan Kamar</h3>
-            <div className="space-y-2">
-              <Select
-                label="Pilih Kamar"
-                value={formData.roomId}
-                onChange={(e) => setFormData(prev => ({...prev, roomId: e.target.value}))}
-                options={rooms}
-                required
-                disabled={loadingRooms}
-                placeholder={loadingRooms ? "Memuat data kamar..." : "Pilih kamar yang tersedia"}
-              />
-            </div>
+        {/* Data Bantuan */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Data Bantuan</h3>
+          <div className="space-y-4">
+            <Select
+              label="Jenis Bantuan"
+              name="assistance"
+              value={formData.assistance}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Pilih Jenis Bantuan</option>
+              {masterData.assistanceTypes.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </Select>
+
+            <Textarea
+              label="Keterangan Bantuan"
+              name="details"
+              value={formData.details}
+              onChange={handleChange}
+            />
           </div>
+        </Card>
 
-          {/* Dokumen */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Dokumen</h3>
-            <div className="space-y-4">
-              {/* Photo preview and upload */}
-              <div className="space-y-2">
-                {previewImage && (
-                  <div 
-                    className="relative w-32 h-32 mb-4 cursor-pointer"
-                    onClick={() => setShowImageModal(true)}
-                  >
-                    <img
-                      src={previewImage}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg hover:opacity-75 transition-opacity"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <span className="bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                        Klik untuk perbesar
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <FileUpload
-                  label="Foto"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  name="photo"
-                  maxSize={5}
-                  error={error && error.photo}
+        {/* Penempatan Kamar */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Penempatan Kamar</h3>
+          <Select
+            label="Pilih Kamar"
+            name="roomId"
+            value={formData.roomId}
+            onChange={handleChange}
+            required
+            disabled={loadingRooms}
+          >
+            <option value="">
+              {loadingRooms ? 'Memuat data kamar...' : 'Pilih Kamar'}
+            </option>
+            {rooms.map(room => (
+              <option 
+                key={room.value} 
+                value={room.value}
+                disabled={room.isDisabled}
+              >
+                {room.label}
+              </option>
+            ))}
+          </Select>
+        </Card>
+
+        {/* Status Penghuni */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Status Penghuni</h3>
+          <div className="space-y-4">
+            <Select
+              label="Status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Pilih Status</option>
+              {masterData.statuses.map(status => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </Select>
+
+            {formData.status === 'ALUMNI' && (
+              <>
+                <Input
+                  type="date"
+                  label="Tanggal Keluar"
+                  name="exitDate"
+                  value={formData.exitDate}
+                  onChange={handleChange}
+                  required
                 />
-              </div>
+                <Textarea
+                  label="Keterangan Alumni"
+                  name="alumniNotes"
+                  value={formData.alumniNotes}
+                  onChange={handleChange}
+                  required
+                />
+              </>
+            )}
+          </div>
+        </Card>
 
-              <FileUpload
-                label="Dokumen Pendukung (Opsional)"
-                accept=".pdf,.doc,.docx"
-                multiple
-                onChange={handleFileChange}
-                name="documents"
-                help="Biarkan kosong jika tidak ingin mengubah dokumen"
-                error={error}
+        {/* Dokumen */}
+        <Card>
+          <h3 className="text-lg font-medium mb-4">Dokumen</h3>
+          
+          {/* Existing photo */}
+          {files.existingPhoto && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">Foto saat ini:</p>
+              <img
+                src={`${import.meta.env.VITE_API_URL}${files.existingPhoto.path}`}
+                alt="Foto penghuni"
+                className="w-32 h-32 object-cover rounded-lg"
               />
-              
-              {/* Preview dokumen yang dipilih */}
-              {files.documents.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">Dokumen yang dipilih:</p>
-                  <ul className="list-disc list-inside">
-                    {files.documents.map((doc, index) => (
-                      <li key={index} className="text-sm font-medium">{doc.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
-          </div>
+          )}
 
-          {/* Tambahkan section Status */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Status Penghuni</h3>
-            <div className="grid grid-cols-1 gap-6">
-              <Select
-                label="Status"
-                value={formData.status}
-                onChange={(e) => {
-                  const newStatus = e.target.value
-                  setFormData(prev => ({
-                    ...prev, 
-                    status: newStatus,
-                    exitDate: newStatus === 'ALUMNI' ? prev.exitDate : '',
-                    alumniNotes: newStatus === 'ALUMNI' ? prev.alumniNotes : ''
-                  }))
-                }}
-                options={[
-                  { value: 'NEW', label: 'Penghuni Baru' },
-                  { value: 'ACTIVE', label: 'Penghuni Aktif' },
-                  { value: 'ALUMNI', label: 'Alumni' }
-                ]}
-                required
-              />
-              
-              {/* Alumni Fields */}
-              {formData.status === 'ALUMNI' && (
-                <>
-                  <Input
-                    type="date"
-                    label="Tanggal Keluar"
-                    name="exitDate"
-                    value={formData.exitDate}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev, 
-                      exitDate: e.target.value
-                    }))}
-                    required
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                  <Textarea
-                    label="Keterangan Alumni"
-                    name="alumniNotes"
-                    value={formData.alumniNotes}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev, 
-                      alumniNotes: e.target.value
-                    }))}
-                    placeholder="Contoh: Melanjutkan kuliah di Universitas X"
-                    required
-                  />
-                </>
-              )}
+          {/* Photo upload */}
+          <FileUpload
+            label="Upload Foto Baru (Opsional)"
+            name="photo"
+            accept="image/*"
+            onChange={handleFileChange}
+          />
+
+          {/* Existing documents */}
+          {files.existingDocuments?.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 mb-2">Dokumen saat ini:</p>
+              <ul className="space-y-2">
+                {files.existingDocuments.map((doc, index) => (
+                  <li key={index} className="flex items-center space-x-2">
+                    <DocumentIcon className="h-5 w-5 text-gray-500" />
+                    <span className="text-sm text-gray-700">{doc.name}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
 
-          {/* Tombol Submit */}
-          <div className="flex justify-end space-x-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => navigate('/dashboard/residents')}
-              disabled={loading}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              loading={loading}
-            >
-              Simpan Perubahan
-            </Button>
+          {/* Document upload */}
+          <div className="mt-4">
+            <FileUpload
+              label="Upload Dokumen Baru (Opsional)"
+              name="documents"
+              accept=".pdf,.doc,.docx"
+              multiple
+              onChange={handleFileChange}
+            />
           </div>
-        </form>
-      </Card>
+        </Card>
 
-      {/* Image Modal */}
-      <ImageModal
-        isOpen={showImageModal}
-        onClose={() => setShowImageModal(false)}
-        imageUrl={previewImage}
-      />
+        {/* Form Actions */}
+        <div className="flex justify-end space-x-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => navigate('/dashboard/residents')}
+          >
+            Batal
+          </Button>
+          <Button
+            type="submit"
+            loading={loading}
+          >
+            Simpan
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }
