@@ -1,12 +1,10 @@
-import { PrismaClient, Resident, Prisma } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 export class ResidentService {
-  async findAll(query: any) {
+  async findAll() {
     try {
-      console.log('[Service] findAll called with query:', query);
-
       const residents = await prisma.resident.findMany({
         include: {
           documents: true,
@@ -16,11 +14,8 @@ export class ResidentService {
           createdAt: 'desc'
         }
       })
-
-      console.log(`[Service] Found ${residents.length} residents`);
       return residents
     } catch (error) {
-      console.error('[Service] Error in findAll:', error)
       throw error
     }
   }
@@ -35,13 +30,13 @@ export class ResidentService {
     })
 
     if (!resident) {
-      throw new Error('Penghuni tidak ditemukan')
+      throw new Error('Resident not found')
     }
 
     return resident
   }
 
-  async create(data: Prisma.ResidentCreateInput) {
+  async create(data: any) {
     try {
       return await prisma.resident.create({
         data,
@@ -51,40 +46,33 @@ export class ResidentService {
         }
       })
     } catch (error) {
-      console.error('Error in create:', error)
       throw error
     }
   }
 
-  async update(id: number, data: Prisma.ResidentUpdateInput) {
-    try {
-      return await prisma.resident.update({
-        where: { id },
-        data,
-        include: {
-          documents: true,
-          room: true
-        }
-      })
-    } catch (error) {
-      console.error('Error in update:', error)
-      throw error
-    }
+  async update(id: number, data: any) {
+    return await prisma.resident.update({
+      where: { id },
+      data,
+      include: {
+        room: true,
+        documents: true
+      }
+    })
   }
 
   async delete(id: number) {
     try {
-      // Hapus dokumen terkait terlebih dahulu
+      // Delete related documents first
       await prisma.document.deleteMany({
         where: { residentId: id }
       })
 
-      // Kemudian hapus resident
+      // Then delete the resident
       return await prisma.resident.delete({
         where: { id }
       })
     } catch (error) {
-      console.error('Error in delete:', error)
       throw error
     }
   }

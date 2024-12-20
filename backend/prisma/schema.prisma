@@ -63,6 +63,7 @@ model Resident {
   status      ResidentStatus
   exitDate    DateTime?
   alumniNotes String?
+  payments    Payment[]
 }
 
 model Document {
@@ -99,6 +100,21 @@ enum ResidentStatus {
   NEW
   ACTIVE
   ALUMNI
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  resident   Resident @relation(fields: [residentId], references: [id])
+  residentId Int
+  amount     Float
+  type       String   // MONTHLY, DEPOSIT, OTHER
+  status     String   // PAID, PENDING, UNPAID
+  notes      String?
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("payments")
 }
 
 // ... model lainnya 

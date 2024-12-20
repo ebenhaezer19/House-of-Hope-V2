@@ -11,3 +11,4 @@ exports.createRoomSchema = zod_1.z.object({
     description: zod_1.z.string().optional()
 });
 exports.updateRoomSchema = exports.createRoomSchema.partial();
+//# sourceMappingURL=room.schema.js.map

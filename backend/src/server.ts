@@ -577,6 +577,140 @@ app.delete('/api/residents/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Payments routes
+app.get('/api/payments', async (req: Request, res: Response) => {
+  try {
+    const { residentId } = req.query;
+    console.log('Getting payments with query:', { residentId });
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        residentId: residentId ? Number(residentId) : undefined
+      },
+      include: {
+        resident: {
+          include: {
+            room: true
+          }
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      }
+    });
+
+    console.log(`Found ${payments.length} payments`);
+    res.json(payments);
+  } catch (error) {
+    console.error('Error getting payments:', error);
+    res.status(500).json({ 
+      message: 'Gagal mengambil data pembayaran',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
+
+app.post('/api/payments', async (req: Request, res: Response) => {
+  try {
+    const { residentId, amount, type, status, notes } = req.body;
+    console.log('Creating payment:', req.body);
+
+    const payment = await prisma.payment.create({
+      data: {
+        residentId: Number(residentId),
+        amount: Number(amount),
+        type,
+        status,
+        notes,
+        date: new Date()
+      },
+      include: {
+        resident: {
+          include: {
+            room: true
+          }
+        }
+      }
+    });
+
+    console.log('Payment created:', payment);
+    res.status(201).json(payment);
+  } catch (error) {
+    console.error('Error creating payment:', error);
+    res.status(500).json({ 
+      message: 'Gagal membuat pembayaran',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
+
+app.get('/api/payments/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const payment = await prisma.payment.findUnique({
+      where: { id: Number(id) },
+      include: {
+        resident: {
+          include: {
+            room: true
+          }
+        }
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Pembayaran tidak ditemukan' });
+    }
+
+    return res.json(payment);
+  } catch (error) {
+    console.error('Error getting payment:', error);
+    return res.status(500).json({ message: 'Gagal mengambil data pembayaran' });
+  }
+});
+
+app.put('/api/payments/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount, type, status, notes } = req.body;
+
+    const payment = await prisma.payment.update({
+      where: { id: Number(id) },
+      data: {
+        amount: Number(amount),
+        type,
+        status,
+        notes
+      },
+      include: {
+        resident: {
+          include: {
+            room: true
+          }
+        }
+      }
+    });
+
+    return res.json(payment);
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    return res.status(500).json({ message: 'Gagal mengupdate pembayaran' });
+  }
+});
+
+app.delete('/api/payments/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.payment.delete({
+      where: { id: Number(id) }
+    });
+    return res.json({ message: 'Pembayaran berhasil dihapus' });
+  } catch (error) {
+    console.error('Error deleting payment:', error);
+    return res.status(500).json({ message: 'Gagal menghapus pembayaran' });
+  }
+});
+
 // Start server
 const server = app.listen(PORT, () => {
   console.log('=================================');
@@ -588,6 +722,7 @@ const server = app.listen(PORT, () => {
   console.log('- Login: http://localhost:5002/api/auth/login');
   console.log('- Rooms: http://localhost:5002/api/rooms');
   console.log('- Residents: http://localhost:5002/api/residents');
+  console.log('- Payments: http://localhost:5002/api/payments');
   console.log('=================================');
 });
 

@@ -6,6 +6,8 @@ import PrivateRoute from './components/PrivateRoute'
 import ResetPassword from './pages/ResetPassword'
 import ForgotPassword from './pages/ForgotPassword'
 import EditResident from './pages/residents/Edit'
+import PaymentIndex from './pages/payments/Index'
+import PaymentForm from './pages/payments/Form'
 
 // Lazy load components
 const Login = lazy(() => import('./pages/Login'))
@@ -70,7 +72,9 @@ function App() {
               <Route path="rooms/map" element={<RoomMap />} />
               
               {/* Payment Routes */}
-              <Route path="payments" element={<PaymentManagement />} />
+              <Route path="payments" element={<PaymentIndex />} />
+              <Route path="payments/create" element={<PaymentForm />} />
+              <Route path="payments/:id/edit" element={<PaymentForm />} />
               
               {/* Facility Routes */}
               <Route path="facilities" element={<FacilityManagement />} />

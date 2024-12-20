@@ -1,4 +1,4 @@
-import { PrismaClient, RoomType } from '@prisma/client'
+import { PrismaClient, RoomType, Gender, Education, AssistanceType, ResidentStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -60,6 +60,64 @@ async function main() {
     }
     
     console.log('Rooms seeded successfully');
+  }
+
+  // Cek apakah sudah ada resident
+  const residentCount = await prisma.resident.count();
+  
+  if (residentCount === 0) {
+    // Buat resident contoh
+    const resident = await prisma.resident.create({
+      data: {
+        name: "John Doe",
+        nik: "1234567890123456",
+        birthPlace: "Jakarta",
+        birthDate: "2000-01-01",
+        gender: Gender.MALE,
+        address: "Jl. Contoh No. 123",
+        phone: "081234567890",
+        education: Education.SMA,
+        schoolName: "SMA Negeri 1",
+        assistance: AssistanceType.YAYASAN,
+        status: ResidentStatus.ACTIVE,
+        roomId: 1, // Pastikan room dengan ID 1 sudah ada
+        details: "Contoh resident untuk testing"
+      }
+    });
+    
+    console.log('Test resident created:', resident);
+
+    // Buat payment untuk resident yang baru dibuat
+    const payment = await prisma.payment.create({
+      data: {
+        residentId: resident.id,
+        amount: 500000,
+        type: "MONTHLY",
+        status: "PAID",
+        notes: "Pembayaran bulan Januari 2024",
+        date: new Date(),
+      },
+    });
+
+    console.log('Test payment created:', payment);
+  } else {
+    // Jika sudah ada resident, gunakan ID resident yang pertama
+    const firstResident = await prisma.resident.findFirst();
+    
+    if (firstResident) {
+      const payment = await prisma.payment.create({
+        data: {
+          residentId: firstResident.id,
+          amount: 500000,
+          type: "MONTHLY",
+          status: "PAID",
+          notes: "Pembayaran bulan Januari 2024",
+          date: new Date(),
+        },
+      });
+
+      console.log('Payment created for existing resident:', payment);
+    }
   }
 
   console.log('Seed completed!');

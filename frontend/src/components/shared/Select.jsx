@@ -3,46 +3,46 @@ const Select = ({
   name,
   value,
   onChange,
-  options = [],
+  children,
   required = false,
-  error,
   disabled = false,
-  placeholder
+  error,
+  className = ''
 }) => {
   return (
-    <div className="form-control w-full">
+    <div className={className}>
       {label && (
-        <label className="label">
-          <span className="label-text">{label}</span>
-          {required && <span className="text-red-500">*</span>}
+        <label 
+          htmlFor={name}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
+      
       <select
+        id={name}
         name={name}
         value={value}
         onChange={onChange}
-        className={`select select-bordered w-full ${error ? 'select-error' : ''}`}
         disabled={disabled}
+        required={required}
+        className={`
+          block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+          ${error ? 'border-red-300' : ''}
+        `}
       >
-        <option value="">{placeholder || `Pilih ${label}`}</option>
-        {options.map(option => (
-          <option 
-            key={option.value} 
-            value={option.value}
-            disabled={option.isDisabled}
-            className={option.isDisabled ? 'text-gray-400' : ''}
-          >
-            {option.label}
-          </option>
-        ))}
+        {children}
       </select>
+      
       {error && (
-        <label className="label">
-          <span className="label-text-alt text-error">{error}</span>
-        </label>
+        <p className="mt-1 text-sm text-red-600">{error}</p>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default Select; 
+export default Select 

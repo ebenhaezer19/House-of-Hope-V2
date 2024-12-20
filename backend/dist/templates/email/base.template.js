@@ -65,3 +65,4 @@ const baseTemplate = (content) => `
 </html>
 `;
 exports.baseTemplate = baseTemplate;
+//# sourceMappingURL=base.template.js.map

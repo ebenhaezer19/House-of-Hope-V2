@@ -4,19 +4,17 @@ import multer from 'multer'
 const storage = multer.memoryStorage()
 
 // Tambahkan filter untuk tipe file yang diizinkan
-const fileFilter = (req: any, file: Express.Multer.File, cb: Function) => {
+const fileFilter = (_req: any, file: Express.Multer.File, cb: Function) => {
   const allowedTypes = [
     'image/jpeg',
     'image/png',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/pdf'
   ]
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Format file tidak didukung'))
+    cb(new Error('Invalid file type'), false)
   }
 }
 

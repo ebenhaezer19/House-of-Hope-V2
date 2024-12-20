@@ -1,70 +1,76 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResidentService = void 0;
 const client_1 = require("@prisma/client");
+const prisma = new client_1.PrismaClient();
 class ResidentService {
-    constructor() {
-        this.prisma = new client_1.PrismaClient();
-    }
-    findAll() {
-        return __awaiter(this, arguments, void 0, function* (query = {}) {
-            return this.prisma.resident.findMany({
+    async findAll() {
+        try {
+            const residents = await prisma.resident.findMany({
                 include: {
-                    room: true,
-                    documents: true
+                    documents: true,
+                    room: true
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
-        });
+            return residents;
+        }
+        catch (error) {
+            throw error;
+        }
     }
-    findOne(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.resident.findUnique({
-                where: { id },
-                include: {
-                    room: true,
-                    documents: true
-                }
-            });
+    async findOne(id) {
+        const resident = await prisma.resident.findUnique({
+            where: { id },
+            include: {
+                documents: true,
+                room: true
+            }
         });
+        if (!resident) {
+            throw new Error('Resident not found');
+        }
+        return resident;
     }
-    create(data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.resident.create({
+    async create(data) {
+        try {
+            return await prisma.resident.create({
                 data,
                 include: {
-                    room: true,
-                    documents: true
+                    documents: true,
+                    room: true
                 }
             });
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async update(id, data) {
+        return await prisma.resident.update({
+            where: { id },
+            data,
+            include: {
+                room: true,
+                documents: true
+            }
         });
     }
-    update(id, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.resident.update({
-                where: { id },
-                data,
-                include: {
-                    room: true,
-                    documents: true
-                }
+    async delete(id) {
+        try {
+            await prisma.document.deleteMany({
+                where: { residentId: id }
             });
-        });
-    }
-    delete(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.resident.delete({
+            return await prisma.resident.delete({
                 where: { id }
             });
-        });
+        }
+        catch (error) {
+            throw error;
+        }
     }
 }
 exports.ResidentService = ResidentService;
+//# sourceMappingURL=resident.service.js.map

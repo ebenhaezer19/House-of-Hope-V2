@@ -2,7 +2,7 @@ import express from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
-const router = express.Router();
+export const router = express.Router();
 
 // Public routes
 router.post('/login', AuthController.login);

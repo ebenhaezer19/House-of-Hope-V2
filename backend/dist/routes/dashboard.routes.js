@@ -11,3 +11,4 @@ router.get('/residents/gender', dashboardController.getResidentsByGender);
 router.get('/rooms/occupancy', dashboardController.getRoomsOccupancy);
 router.get('/recent-activities', dashboardController.getRecentActivities);
 exports.default = router;
+//# sourceMappingURL=dashboard.routes.js.map

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, DocumentIcon, EyeIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import { Alert } from '../../components/shared'
 import defaultAvatar from '../../assets/default-avatar.png';
@@ -478,6 +478,13 @@ const ResidentIndex = () => {
                         title="Edit"
                       >
                         <PencilIcon className="h-5 w-5" />
+                      </Link>
+                      <Link
+                        to={`/dashboard/payments?residentId=${resident.id}`}
+                        className="text-green-600 hover:text-green-900"
+                        title="Kelola Pembayaran"
+                      >
+                        <CreditCardIcon className="h-5 w-5" />
                       </Link>
                       <button
                         onClick={() => handleDelete(resident.id)}

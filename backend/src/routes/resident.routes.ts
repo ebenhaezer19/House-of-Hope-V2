@@ -7,36 +7,19 @@ const residentController = new ResidentController()
 
 // Debug logging
 router.use((req, res, next) => {
-  console.log('=== Resident Route ===');
-  console.log(`Method: ${req.method}`);
-  console.log(`Path: ${req.path}`);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+  console.log('\n=== Resident Route Handler ===');
+  console.log(`${req.method} ${req.path}`);
   console.log('Query:', req.query);
-  console.log('===================');
+  console.log('Body:', req.body);
+  console.log('==========================\n');
   next();
 });
 
 // GET /api/residents
-router.get('/', async (req, res) => {
-  console.log('[Resident Route] GET / called');
-  try {
-    console.log('Calling residentController.getAllResidents');
-    await residentController.getAllResidents(req, res);
-    console.log('getAllResidents completed');
-  } catch (error) {
-    console.error('[Resident Route] Error:', error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      message: 'Error in resident route handler',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
+router.get('/', residentController.getAllResidents);
 
 // GET /api/residents/:id
-router.get('/:id', residentController.getResident.bind(residentController))
+router.get('/:id', residentController.getResident);
 
 // POST /api/residents
 router.post('/', 
@@ -44,7 +27,7 @@ router.post('/',
     { name: 'photo', maxCount: 1 },
     { name: 'documents', maxCount: 5 }
   ]),
-  residentController.createResident.bind(residentController)
+  residentController.createResident
 )
 
 // PUT /api/residents/:id
@@ -53,10 +36,10 @@ router.put('/:id',
     { name: 'photo', maxCount: 1 },
     { name: 'documents', maxCount: 5 }
   ]),
-  residentController.updateResident.bind(residentController)
+  residentController.updateResident
 )
 
 // DELETE /api/residents/:id
-router.delete('/:id', residentController.deleteResident.bind(residentController))
+router.delete('/:id', residentController.deleteResident)
 
 export default router 

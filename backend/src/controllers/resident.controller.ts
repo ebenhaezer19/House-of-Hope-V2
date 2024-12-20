@@ -1,64 +1,54 @@
 import { Request, Response } from 'express'
 import { ResidentService } from '../services/resident.service'
-import { FileService } from '../services/file.service'
-import { Prisma } from '@prisma/client'
-import { UploadedFile } from '../types/file.types'
-import { ResidentStatus } from '@prisma/client'
-import path from 'path'
-import fs from 'fs'
+import { PrismaClient, ResidentStatus } from '@prisma/client'
 
 const residentService = new ResidentService()
-const fileService = new FileService()
+const prisma = new PrismaClient()
 
 export class ResidentController {
   async getAllResidents(req: Request, res: Response) {
     try {
+      console.log('Fetching all residents...');
       const residents = await prisma.resident.findMany({
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          createdAt: true,
-          exitDate: true,
-          gender: true,
-          education: true,
-          assistance: true,
-          room: {
-            select: {
-              id: true,
-              number: true,
-              floor: true
+        include: {
+          room: true,
+          documents: true,
+          payments: {
+            orderBy: {
+              date: 'desc'
             }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
       });
-
-      res.json(residents);
+      console.log(`Found ${residents.length} residents`);
+      return res.json(residents);
     } catch (error) {
-      console.error('Error fetching residents:', error);
-      res.status(500).json({ message: 'Gagal mengambil data penghuni' });
+      console.error('Error getting residents:', error);
+      return res.status(500).json({ message: 'Gagal mengambil data penghuni' });
     }
   }
 
   async getResident(req: Request, res: Response) {
     try {
-      const id = Number(req.params.id);
+      const { id } = req.params;
       const resident = await prisma.resident.findUnique({
-        where: { id },
+        where: { id: Number(id) },
         include: {
-          documents: true,
-          room: true
+          room: true,
+          documents: true
         }
       });
-
+      
       if (!resident) {
-        return res.status(404).json({ message: 'Data penghuni tidak ditemukan' });
+        return res.status(404).json({ message: 'Resident not found' });
       }
-
-      res.json(resident);
+      
+      return res.json(resident);
     } catch (error) {
-      console.error('Error fetching resident:', error);
-      res.status(500).json({ message: 'Gagal mengambil data penghuni' });
+      return res.status(500).json({ message: 'Error getting resident' });
     }
   }
 
@@ -68,7 +58,7 @@ export class ResidentController {
       
       // Validasi status
       if (!Object.values(ResidentStatus).includes(data.status)) {
-        throw new Error(`Status tidak valid: ${data.status}`);
+        throw new Error(`Invalid status: ${data.status}`);
       }
 
       // Format data dengan status yang benar
@@ -98,12 +88,6 @@ export class ResidentController {
         })
       };
 
-      console.log('Creating resident with data:', {
-        name: residentData.name,
-        status: residentData.status,
-        exitDate: residentData.exitDate
-      });
-
       const resident = await prisma.resident.create({
         data: residentData,
         include: {
@@ -111,21 +95,14 @@ export class ResidentController {
         }
       });
 
-      // Kirim response yang lebih sederhana
-      res.status(201).json({
-        message: 'Data penghuni berhasil ditambahkan',
-        data: {
-          id: resident.id,
-          name: resident.name,
-          status: resident.status,
-          exitDate: resident.exitDate
-        }
+      return res.status(201).json({
+        message: 'Resident created successfully',
+        data: resident
       });
 
     } catch (error) {
-      console.error('Error creating resident:', error);
-      res.status(400).json({ 
-        message: 'Gagal membuat data penghuni',
+      return res.status(400).json({ 
+        message: 'Error creating resident',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
@@ -133,79 +110,25 @@ export class ResidentController {
 
   async updateResident(req: Request, res: Response) {
     try {
-      const { id } = req.params
-      const data = JSON.parse(req.body.data)
+      const { id } = req.params;
+      const data = JSON.parse(req.body.data);
       
-      // Handle file uploads
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-      
-      const updatedResident = await residentService.update(parseInt(id), {
-        ...data,
-        // Update other fields as needed
-      })
-
-      res.json(updatedResident)
+      const updatedResident = await residentService.update(parseInt(id), data);
+      return res.json(updatedResident);
     } catch (error) {
-      console.error('Error updating resident:', error)
-      res.status(500).json({ message: 'Gagal memperbarui data penghuni' })
+      return res.status(500).json({ message: 'Error updating resident' });
     }
   }
 
   async deleteResident(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'ID tidak valid' });
-      }
-
-      // Cek apakah resident ada
-      const resident = await prisma.resident.findUnique({
-        where: { id },
-        include: {
-          documents: true
-        }
-      });
-
-      if (!resident) {
-        return res.status(404).json({ message: 'Data penghuni tidak ditemukan' });
-      }
-
-      // Hapus file dokumen dari storage jika ada
-      for (const doc of resident.documents) {
-        try {
-          const filePath = path.join(__dirname, '../../uploads', path.basename(doc.path));
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (error) {
-          console.error('Error deleting file:', error);
-        }
-      }
-
-      // Hapus dokumen dari database
-      await prisma.document.deleteMany({
-        where: { residentId: id }
-      });
-
-      // Hapus data penghuni
+      const { id } = req.params;
       await prisma.resident.delete({
-        where: { id }
+        where: { id: Number(id) }
       });
-
-      res.json({ 
-        success: true,
-        message: 'Data penghuni berhasil dihapus',
-        deletedId: id 
-      });
-
+      return res.json({ message: 'Resident deleted successfully' });
     } catch (error) {
-      console.error('Error deleting resident:', error);
-      res.status(500).json({ 
-        success: false,
-        message: 'Gagal menghapus data penghuni',
-        error: process.env.NODE_ENV === 'development' ? error : undefined
-      });
+      return res.status(500).json({ message: 'Error deleting resident' });
     }
   }
 } 

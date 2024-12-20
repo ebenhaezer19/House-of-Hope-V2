@@ -1,229 +1,197 @@
-import { useState } from 'react'
-import { 
-  CurrencyDollarIcon, 
-  ClockIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon
-} from '@heroicons/react/24/outline'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import api from '../../services/api'
+import { Alert, Button } from '../../components/shared'
 
-const PaymentManagement = () => {
-  const [activeTab, setActiveTab] = useState('all') // all, pending, completed
+const PaymentIndex = () => {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [searchParams] = useSearchParams();
+  const residentId = searchParams.get('residentId');
+  const [resident, setResident] = useState(null);
 
-  const payments = [
-    {
-      id: 1,
-      resident_name: 'John Doe',
-      room_number: 'L-01',
-      amount: 500000,
-      type: 'Uang Asrama',
-      due_date: '2024-03-15',
-      status: 'pending',
-      payment_method: null
-    },
-    {
-      id: 2,
-      resident_name: 'Jane Smith',
-      room_number: 'P-01',
-      amount: 500000,
-      type: 'Uang Asrama',
-      due_date: '2024-03-15',
-      status: 'completed',
-      payment_method: 'transfer',
-      payment_date: '2024-03-10'
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch resident data if residentId exists
+      if (residentId) {
+        console.log('Fetching resident data for ID:', residentId);
+        const residentResponse = await api.get(`/api/residents/${residentId}`);
+        setResident(residentResponse.data);
+      }
+
+      // Fetch payments
+      const url = residentId 
+        ? `/api/payments?residentId=${residentId}`
+        : '/api/payments';
+
+      console.log('Fetching payments from:', url);
+      const response = await api.get(url);
+      console.log('Payments data:', response.data);
+      
+      setPayments(response.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Gagal memuat data pembayaran');
+    } finally {
+      setLoading(false);
     }
-  ]
+  };
 
-  const stats = {
-    total_pending: payments.filter(p => p.status === 'pending').length,
-    total_completed: payments.filter(p => p.status === 'completed').length,
-    total_amount: payments.reduce((sum, p) => sum + p.amount, 0),
-    total_paid: payments
-      .filter(p => p.status === 'completed')
-      .reduce((sum, p) => sum + p.amount, 0)
+  useEffect(() => {
+    fetchData();
+  }, [residentId]);
+
+  const handleDelete = async (id) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus pembayaran ini?')) return;
+    
+    try {
+      setDeleteError(null);
+      await api.delete(`/api/payments/${id}`);
+      setSuccessMessage('Pembayaran berhasil dihapus');
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      setDeleteError(
+        error.response?.data?.message || 
+        'Gagal menghapus pembayaran'
+      );
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR'
+    }).format(amount);
+  };
+
+  if (loading) {
+    return <div className="text-center py-10">Memuat data...</div>;
   }
 
-  const filteredPayments = activeTab === 'all' 
-    ? payments
-    : payments.filter(p => p.status === activeTab)
-
   return (
-    <div className="space-y-6">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Manajemen Pembayaran</h1>
-        <div className="mt-4 sm:mt-0">
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-          >
-            Tambah Tagihan
-          </button>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {resident ? `Pembayaran - ${resident.name}` : 'Daftar Pembayaran'}
+        </h1>
+        <Link
+          to={residentId ? `/dashboard/payments/create?residentId=${residentId}` : '/dashboard/payments/create'}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+          Tambah Pembayaran
+        </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <ClockIcon className="h-6 w-6 text-yellow-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Belum Dibayar</dt>
-                <dd className="text-2xl font-semibold text-gray-900">{stats.total_pending}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-6 w-6 text-green-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Lunas</dt>
-                <dd className="text-2xl font-semibold text-gray-900">{stats.total_completed}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CurrencyDollarIcon className="h-6 w-6 text-gray-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Total Tagihan</dt>
-                <dd className="text-2xl font-semibold text-gray-900">
-                  Rp {stats.total_amount.toLocaleString()}
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CurrencyDollarIcon className="h-6 w-6 text-green-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Total Terbayar</dt>
-                <dd className="text-2xl font-semibold text-gray-900">
-                  Rp {stats.total_paid.toLocaleString()}
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Messages */}
+      {error && (
+        <Alert type="error" message={error} />
+      )}
+      {deleteError && (
+        <Alert type="error" message={deleteError} />
+      )}
+      {successMessage && (
+        <Alert type="success" message={successMessage} />
+      )}
 
-      {/* Filter Tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-            {[
-              { id: 'all', name: 'Semua' },
-              { id: 'pending', name: 'Belum Dibayar' },
-              { id: 'completed', name: 'Lunas' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  ${activeTab === tab.id
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                `}
-              >
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Payment List */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Penghuni
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kamar
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Jenis Pembayaran
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Jumlah
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Jatuh Tempo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Aksi
-                </th>
+      {/* Payments Table */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tanggal
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Penghuni
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipe
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Jumlah
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Keterangan
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {payments.map((payment) => (
+              <tr key={payment.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {new Date(payment.date).toLocaleDateString('id-ID')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {payment.resident.name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {payment.type === 'MONTHLY' ? 'Bulanan' : 
+                   payment.type === 'DEPOSIT' ? 'Deposit' : 'Lainnya'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {formatCurrency(payment.amount)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    payment.status === 'PAID' 
+                      ? 'bg-green-100 text-green-800'
+                      : payment.status === 'PENDING'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {payment.status === 'PAID' ? 'Lunas' : 
+                     payment.status === 'PENDING' ? 'Pending' : 'Belum Bayar'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {payment.notes || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex justify-end space-x-2">
+                    <Link
+                      to={`/dashboard/payments/${payment.id}/edit`}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(payment.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPayments.map((payment) => (
-                <tr key={payment.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {payment.resident_name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{payment.room_number}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{payment.type}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      Rp {payment.amount.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{payment.due_date}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      payment.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {payment.status === 'completed' ? 'Lunas' : 'Belum Dibayar'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {payment.status === 'pending' ? (
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        Konfirmasi Pembayaran
-                      </button>
-                    ) : (
-                      <button className="text-gray-600 hover:text-gray-900">
-                        Lihat Detail
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Empty state */}
+        {payments.length === 0 && (
+          <div className="text-center py-10">
+            <p className="text-gray-500">Belum ada data pembayaran</p>
+          </div>
+        )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PaymentManagement 
+export default PaymentIndex; 
