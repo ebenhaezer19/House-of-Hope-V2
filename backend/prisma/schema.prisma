@@ -64,6 +64,7 @@ model Resident {
   exitDate    DateTime?
   alumniNotes String?
   payments    Payment[]
+  bookings    Booking[]
 }
 
 model Document {
@@ -115,6 +116,58 @@ model Payment {
   updatedAt  DateTime @updatedAt
 
   @@map("payments")
+}
+
+// Tambahkan model Facility
+model Facility {
+  id          Int       @id @default(autoincrement())
+  name        String
+  type        String    
+  capacity    Int
+  status      String    
+  image       String?   
+  description String?
+  location    String?   
+  maintenanceSchedule String?
+  bookings    Booking[]
+  maintenanceLogs MaintenanceLog[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("facilities")
+}
+
+model Booking {
+  id          Int       @id @default(autoincrement())
+  facility    Facility  @relation(fields: [facilityId], references: [id])
+  facilityId  Int
+  resident    Resident  @relation(fields: [residentId], references: [id])
+  residentId  Int
+  startTime   DateTime
+  endTime     DateTime
+  purpose     String
+  status      String    // pending, approved, rejected
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("bookings")
+}
+
+model MaintenanceLog {
+  id          Int       @id @default(autoincrement())
+  facility    Facility  @relation(fields: [facilityId], references: [id])
+  facilityId  Int
+  type        String    // routine, repair, etc
+  description String
+  status      String    // pending, in_progress, completed
+  startDate   DateTime
+  endDate     DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("maintenance_logs")
 }
 
 // ... model lainnya 

@@ -3,6 +3,7 @@ import authRoutes from './auth.routes'
 import residentRoutes from './resident.routes'
 import roomRoutes from './room.routes'
 import paymentRoutes from './payment.routes'
+import facilityRoutes from './facility.routes'
 
 const router = express.Router()
 
@@ -19,5 +20,6 @@ router.use('/auth', authRoutes)
 router.use('/residents', residentRoutes)
 router.use('/rooms', roomRoutes)
 router.use('/payments', paymentRoutes)
+router.use('/facilities', facilityRoutes)
 
 export default router

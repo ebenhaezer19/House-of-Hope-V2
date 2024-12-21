@@ -750,6 +750,303 @@ app.delete('/api/payments/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Facilities routes
+app.get('/api/facilities', async (_req: Request, res: Response) => {
+  try {
+    const facilities = await prisma.facility.findMany({
+      include: {
+        bookings: {
+          where: {
+            startTime: {
+              lte: new Date()
+            },
+            endTime: {
+              gte: new Date()
+            }
+          },
+          include: {
+            resident: true
+          }
+        },
+        maintenanceLogs: {
+          orderBy: {
+            startDate: 'desc'
+          }
+        }
+      }
+    });
+
+    res.json(facilities);
+  } catch (error) {
+    console.error('Error getting facilities:', error);
+    res.status(500).json({ message: 'Gagal mengambil data fasilitas' });
+  }
+});
+
+app.post('/api/facilities', async (req: Request, res: Response) => {
+  try {
+    const { name, type, capacity, status, image, description, location, maintenanceSchedule } = req.body;
+
+    console.log('Creating facility with data:', req.body);
+
+    const facility = await prisma.facility.create({
+      data: {
+        name,
+        type,
+        capacity: parseInt(capacity),
+        status,
+        image,
+        description,
+        location,
+        maintenanceSchedule
+      }
+    });
+
+    console.log('Facility created:', facility);
+    res.status(201).json(facility);
+  } catch (error) {
+    console.error('Error creating facility:', error);
+    res.status(500).json({ 
+      message: 'Gagal membuat fasilitas baru',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+app.post('/api/facilities/:id/bookings', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { residentId, startTime, endTime, purpose, notes } = req.body;
+
+    const booking = await prisma.booking.create({
+      data: {
+        facilityId: parseInt(id),
+        residentId: parseInt(residentId),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        purpose,
+        notes,
+        status: 'pending'
+      },
+      include: {
+        facility: true,
+        resident: true
+      }
+    });
+
+    res.status(201).json(booking);
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({ message: 'Gagal membuat booking' });
+  }
+});
+
+app.post('/api/facilities/:id/maintenance', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { type, description, startDate, status, notes } = req.body;
+
+    const maintenanceLog = await prisma.maintenanceLog.create({
+      data: {
+        facilityId: parseInt(id),
+        type,
+        description,
+        startDate: new Date(startDate),
+        status,
+        notes
+      },
+      include: {
+        facility: true
+      }
+    });
+
+    if (status === 'in_progress') {
+      await prisma.facility.update({
+        where: { id: parseInt(id) },
+        data: { status: 'maintenance' }
+      });
+    }
+
+    res.status(201).json(maintenanceLog);
+  } catch (error) {
+    console.error('Error creating maintenance log:', error);
+    res.status(500).json({ message: 'Gagal membuat log maintenance' });
+  }
+});
+
+// Update facility
+app.put('/api/facilities/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, type, capacity, status, image, description, location, maintenanceSchedule } = req.body;
+
+    const facility = await prisma.facility.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        type,
+        capacity: parseInt(capacity),
+        status,
+        image,
+        description,
+        location,
+        maintenanceSchedule
+      }
+    });
+
+    res.json(facility);
+  } catch (error) {
+    console.error('Error updating facility:', error);
+    res.status(500).json({ message: 'Gagal memperbarui fasilitas' });
+  }
+});
+
+// Delete facility
+app.delete('/api/facilities/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.facility.delete({
+      where: { id: Number(id) }
+    });
+
+    res.json({ message: 'Fasilitas berhasil dihapus' });
+  } catch (error) {
+    console.error('Error deleting facility:', error);
+    res.status(500).json({ message: 'Gagal menghapus fasilitas' });
+  }
+});
+
+// Get facility by ID
+app.get('/api/facilities/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const facility = await prisma.facility.findUnique({
+      where: { 
+        id: Number(id) 
+      },
+      include: {
+        bookings: {
+          include: {
+            resident: true
+          },
+          orderBy: {
+            startTime: 'asc'
+          }
+        },
+        maintenanceLogs: {
+          where: {
+            status: 'in_progress'
+          }
+        }
+      }
+    });
+
+    if (!facility) {
+      res.status(404).json({ message: 'Fasilitas tidak ditemukan' });
+      return;
+    }
+
+    res.json(facility);
+    return;
+  } catch (error) {
+    console.error('Error getting facility:', error);
+    res.status(500).json({ message: 'Gagal mengambil data fasilitas' });
+    return;
+  }
+});
+
+// Update maintenance log
+app.put('/api/facilities/maintenance/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { type, description, startDate, status, endDate, notes } = req.body;
+
+    const maintenanceLog = await prisma.maintenanceLog.update({
+      where: { id: Number(id) },
+      data: {
+        type,
+        description,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        status,
+        notes
+      },
+      include: {
+        facility: true
+      }
+    });
+
+    // Update facility status if maintenance is completed
+    if (status === 'completed') {
+      await prisma.facility.update({
+        where: { id: maintenanceLog.facilityId },
+        data: { status: 'available' }
+      });
+    }
+
+    res.json(maintenanceLog);
+    return;
+  } catch (error) {
+    console.error('Error updating maintenance log:', error);
+    res.status(500).json({ message: 'Gagal mengupdate log maintenance' });
+    return;
+  }
+});
+
+// Delete maintenance log
+app.delete('/api/facilities/maintenance/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Get maintenance log first to check facility status
+    const maintenanceLog = await prisma.maintenanceLog.findUnique({
+      where: { id: Number(id) },
+      include: {
+        facility: true
+      }
+    });
+
+    if (!maintenanceLog) {
+      res.status(404).json({ message: 'Log maintenance tidak ditemukan' });
+      return;
+    }
+
+    // Delete the maintenance log
+    await prisma.maintenanceLog.delete({
+      where: { id: Number(id) }
+    });
+
+    // If this was an active maintenance, update facility status back to available
+    if (maintenanceLog.status === 'in_progress' && maintenanceLog.facility.status === 'maintenance') {
+      await prisma.facility.update({
+        where: { id: maintenanceLog.facilityId },
+        data: { status: 'available' }
+      });
+    }
+
+    res.json({ message: 'Log maintenance berhasil dihapus' });
+    return;
+  } catch (error) {
+    console.error('Error deleting maintenance log:', error);
+    res.status(500).json({ message: 'Gagal menghapus log maintenance' });
+    return;
+  }
+});
+
+// Log registered routes on startup
+console.log('\n=== Registered Routes ===');
+console.log('Available endpoints:');
+console.log('- Test: http://localhost:5002/test');
+console.log('- Health: http://localhost:5002/health');
+console.log('- Login: http://localhost:5002/api/auth/login');
+console.log('- Rooms: http://localhost:5002/api/rooms');
+console.log('- Residents: http://localhost:5002/api/residents');
+console.log('- Payments: http://localhost:5002/api/payments');
+console.log('- Facilities: http://localhost:5002/api/facilities');
+console.log('=================================');
+
 // Start server
 const PORT = process.env.PORT || 5002;
 

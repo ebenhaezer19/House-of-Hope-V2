@@ -8,6 +8,9 @@ import ForgotPassword from './pages/ForgotPassword'
 import EditResident from './pages/residents/Edit'
 import PaymentIndex from './pages/payments/Index'
 import PaymentForm from './pages/payments/Form'
+import FacilityForm from './pages/facilities/Form'
+import EditFacility from './pages/facilities/EditFacility'
+import FacilityBookings from './pages/facilities/FacilityBookings'
 
 // Lazy load components
 const Login = lazy(() => import('./pages/Login'))
@@ -78,6 +81,9 @@ function App() {
               
               {/* Facility Routes */}
               <Route path="facilities" element={<FacilityManagement />} />
+              <Route path="facilities/create" element={<FacilityForm />} />
+              <Route path="facilities/:id/edit" element={<EditFacility />} />
+              <Route path="facilities/:id/bookings" element={<FacilityBookings />} />
               
               {/* Security Routes */}
               <Route path="security" element={<SecurityManagement />} />
