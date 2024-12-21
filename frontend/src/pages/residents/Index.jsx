@@ -291,7 +291,7 @@ const ResidentIndex = () => {
             >
               <option value="">Semua</option>
               <option value="YAYASAN">Yayasan</option>
-              <option value="MANDIRI">Mandiri</option>
+              <option value="DIAKONIA">Diakonia</option>
             </select>
           </div>
 
