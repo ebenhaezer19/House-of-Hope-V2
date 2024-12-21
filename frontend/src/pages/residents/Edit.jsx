@@ -164,17 +164,24 @@ const EditResident = () => {
   }
 
   const handleFileChange = (e) => {
-    const { name, files } = e.target
+    const { name, files: uploadedFiles } = e.target;
+    
+    console.log('File upload:', {
+      name,
+      files: uploadedFiles,
+      count: uploadedFiles?.length
+    });
+
     if (name === 'photo') {
       setFiles(prev => ({
         ...prev,
-        photo: files[0]
-      }))
+        photo: uploadedFiles[0]
+      }));
     } else if (name === 'documents') {
       setFiles(prev => ({
         ...prev,
-        documents: Array.from(files)
-      }))
+        documents: Array.from(uploadedFiles)
+      }));
     }
   }
 
@@ -186,59 +193,84 @@ const EditResident = () => {
       setLoading(true);
       setError(null);
 
-      // Validasi NIK
-      if (formData.nik.length !== 16) {
-        throw new Error('NIK harus 16 digit');
+      // Validasi data wajib
+      if (!formData.name || !formData.nik || !formData.roomId) {
+        throw new Error('Mohon lengkapi data wajib');
       }
 
-      // Validasi format NIK (hanya angka)
-      if (!/^\d+$/.test(formData.nik)) {
-        throw new Error('NIK hanya boleh berisi angka');
-      }
-
-      // Validasi khusus untuk alumni
-      if (formData.status === 'ALUMNI') {
-        if (!formData.exitDate || !formData.alumniNotes) {
-          throw new Error('Mohon lengkapi data alumni');
-        }
-      }
-
-      // Siapkan FormData untuk upload
+      // Siapkan FormData
       const formDataToSend = new FormData();
-      formDataToSend.append('data', JSON.stringify(formData));
-      
-      // Tambahkan file baru jika ada
+
+      // Tambahkan data penghuni
+      const dataToSend = {
+        ...formData,
+        roomId: parseInt(formData.roomId)
+      };
+      formDataToSend.append('data', JSON.stringify(dataToSend));
+
+      // Tambahkan foto jika ada
       if (files.photo) {
+        console.log('Adding photo:', {
+          name: files.photo.name,
+          type: files.photo.type,
+          size: files.photo.size
+        });
         formDataToSend.append('photo', files.photo);
       }
-      
+
+      // Tambahkan dokumen jika ada
       if (files.documents.length > 0) {
         files.documents.forEach(doc => {
+          console.log('Adding document:', {
+            name: doc.name,
+            type: doc.type,
+            size: doc.size
+          });
           formDataToSend.append('documents', doc);
         });
       }
 
-      // Kirim ke API
-      await api.put(`/api/residents/${id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      // Log FormData untuk debug
+      console.log('FormData entries:');
+      for (const pair of formDataToSend.entries()) {
+        if (pair[0] === 'data') {
+          console.log('- data:', JSON.parse(pair[1]));
+        } else if (pair[1] instanceof File) {
+          console.log(`- ${pair[0]}:`, {
+            name: pair[1].name,
+            type: pair[1].type,
+            size: pair[1].size
+          });
         }
-      });
+      }
 
-      // Redirect dengan pesan sukses
-      navigate('/dashboard/residents', {
-        state: { message: 'Data penghuni berhasil diperbarui' }
-      });
+      // Kirim request dengan progress
+      try {
+        const response = await api.uploadFiles(`/api/residents/${id}`, formDataToSend);
+        console.log('Update response:', response.data);
+
+        // Redirect dengan pesan sukses
+        navigate('/dashboard/residents', {
+          state: { message: 'Data penghuni berhasil diperbarui' }
+        });
+      } catch (error) {
+        console.error('Upload error:', error);
+        throw error; // Re-throw untuk ditangkap oleh catch block di atas
+      }
 
     } catch (error) {
       console.error('Error updating resident:', error);
-      
-      // Handle specific errors
-      if (error.response?.data?.error?.includes('Unique constraint failed')) {
-        setError('NIK sudah terdaftar. Silakan gunakan NIK lain.');
+      let errorMessage = 'Gagal memperbarui data penghuni. ';
+
+      if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message.includes('Network Error')) {
+        errorMessage += 'Koneksi terputus. Silakan coba lagi.';
       } else {
-        setError(error.response?.data?.message || error.message);
+        errorMessage += error.message;
       }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
