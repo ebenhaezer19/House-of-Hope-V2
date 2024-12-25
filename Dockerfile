@@ -24,6 +24,9 @@ COPY backend/src ./src/
 RUN npm install
 RUN npm install -g typescript
 
+# Set temporary DATABASE_URL for prisma generate
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+
 # Generate Prisma Client
 RUN npx prisma generate
 
@@ -64,6 +67,9 @@ COPY --from=builder /app/frontend/dist ../frontend/dist
 
 # Install production dependencies
 RUN npm ci --only=production
+
+# Set temporary DATABASE_URL for second prisma generate
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
 # Generate Prisma Client again for production
 RUN npx prisma generate
