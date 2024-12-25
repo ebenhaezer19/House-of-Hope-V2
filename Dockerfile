@@ -10,11 +10,20 @@ RUN apk add --no-cache python3 make g++
 # Copy root package files
 COPY package*.json ./
 
-# Copy backend package files
+# Copy backend files first
 COPY backend/package*.json ./backend/
+COPY backend/tsconfig.json ./backend/
+COPY backend/prisma ./backend/prisma/
+COPY backend/src ./backend/src/
 
-# Copy frontend package files
+# Copy frontend files
 COPY frontend/package*.json ./frontend/
+COPY frontend/src ./frontend/src/
+COPY frontend/public ./frontend/public/
+COPY frontend/index.html ./frontend/
+COPY frontend/vite.config.js ./frontend/
+COPY frontend/tailwind.config.js ./frontend/
+COPY frontend/postcss.config.js ./frontend/
 
 # Install dependencies for all packages
 RUN npm install
@@ -24,14 +33,8 @@ RUN cd frontend && npm install
 # Install TypeScript globally
 RUN npm install -g typescript
 
-# Copy prisma files
-COPY backend/prisma ./backend/prisma/
-
 # Generate Prisma Client
 RUN cd backend && npx prisma generate
-
-# Copy all source files
-COPY . .
 
 # Build backend
 RUN cd backend && npm run build
