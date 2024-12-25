@@ -4,7 +4,7 @@
   "description": "Backend for House of Hope Application",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node -r dotenv/config dist/index.js",
     "dev": "nodemon --exec ts-node src/server.ts",
     "debug": "nodemon --exec \"node --inspect -r ts-node/register\" src/server.ts",
     "start:simple": "ts-node src/server.ts",

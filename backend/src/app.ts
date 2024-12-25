@@ -1,8 +1,10 @@
 import express from 'express'
 import cors from 'cors'
 import routes from './routes'
+import { PrismaClient } from '@prisma/client'
 
 const app = express()
+const prisma = new PrismaClient()
 
 // Essential middleware
 app.use(express.json())
@@ -16,7 +18,6 @@ const corsOptions = {
       'http://localhost:5173'
     ];
     
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
@@ -26,13 +27,11 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  optionsSuccessStatus: 200
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
-// Apply CORS globally
 app.use(cors(corsOptions));
 
 // Handle OPTIONS preflight
@@ -47,6 +46,29 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   next();
+});
+
+// Improved health check endpoint
+app.get('/health', async (_req, res) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected',
+      environment: process.env.NODE_ENV
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: process.env.NODE_ENV === 'development' ? error : 'Database connection failed'
+    });
+  }
 });
 
 // Basic test route
@@ -75,14 +97,5 @@ app.get('/debug/routes', (req, res) => {
     })
   res.json(registeredRoutes)
 })
-
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
 
 export default app

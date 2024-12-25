@@ -36,7 +36,8 @@ FROM node:18-alpine
 # Install production dependencies
 RUN apk add --no-cache \
     openssl \
-    libc6-compat
+    libc6-compat \
+    curl
 
 # Set up backend
 WORKDIR /app/backend
@@ -50,6 +51,10 @@ RUN mkdir -p uploads && chmod 777 uploads
 
 # Generate Prisma Client for production
 RUN npx prisma generate
+
+# Add Docker healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Expose port
 EXPOSE 5002
