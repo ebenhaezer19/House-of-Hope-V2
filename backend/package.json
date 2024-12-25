@@ -10,7 +10,7 @@
     "start:simple": "ts-node src/server.ts",
     "kill": "node scripts/kill-port.js",
     "dev:clean": "npm run kill && npm run dev",
-    "build": "prisma generate && tsc",
+    "build": "tsc && prisma generate",
     "test": "jest",
     "check-uploads": "node -e \"const fs=require('fs');const path=require('path');const dir=path.resolve(__dirname,'uploads');console.log('Uploads:',{dir,exists:fs.existsSync(dir),files:fs.existsSync(dir)?fs.readdirSync(dir):'none'});\""
   },
@@ -52,6 +52,5 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "postinstall": "prisma generate",
-  "prebuild": "prisma generate"
+  "postinstall": "prisma generate"
 }

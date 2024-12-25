@@ -35,34 +35,16 @@ try {
   process.exit(1);
 }
 
-const validatePort = () => {
-  const port = process.env.PGPORT;
-  if (!port) {
-    throw new Error('PGPORT is not set');
-  }
-  const numPort = Number(port);
-  if (isNaN(numPort)) {
-    throw new Error(`Invalid port number: ${port}`);
-  }
-  return numPort;
-};
-
-try {
-  const port = validatePort();
-  console.log('Port validation passed:', port);
-  
-  const prisma = new PrismaClient({
-    log: ['query', 'info', 'warn', 'error'],
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL
-      }
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
     }
-  });
-} catch (error) {
-  console.error('Port validation failed:', error.message);
-  process.exit(1);
-}
+  }
+})
+
+const port = Number(process.env.PORT) || 5002
 
 // Debug environment variables
 console.log('Environment variables:');
@@ -77,12 +59,6 @@ console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
 checkRequiredEnvVars();
 
 // Test database connection
-console.log('Port validation:', {
-  PGPORT: process.env.PGPORT,
-  isNumeric: !isNaN(Number(process.env.PGPORT)),
-  portValue: Number(process.env.PGPORT)
-});
-
 prisma.$connect()
   .then(() => {
     console.log('Database connected successfully')
