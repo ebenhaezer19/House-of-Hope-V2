@@ -49,5 +49,5 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "postinstall": "prisma generate"
+  "postinstall": "prisma generate && prisma migrate deploy && prisma db seed"
 }

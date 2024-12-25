@@ -14,6 +14,7 @@ export class AuthController {
       const { email, password } = req.body;
       
       if (!email || !password) {
+        console.log('Missing email or password');
         return res.status(400).json({
           message: 'Email dan password harus diisi'
         });
@@ -23,6 +24,8 @@ export class AuthController {
         where: { email }
       });
 
+      console.log('Found user:', user ? 'yes' : 'no');
+
       if (!user) {
         return res.status(401).json({
           message: 'Email atau password salah'
@@ -30,6 +33,7 @@ export class AuthController {
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log('Password valid:', isValidPassword);
       
       if (!isValidPassword) {
         return res.status(401).json({
@@ -46,6 +50,7 @@ export class AuthController {
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
 
+      console.log('Login successful for:', email);
       return res.json({
         token,
         user: userWithoutPassword
