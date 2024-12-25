@@ -13,10 +13,17 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "baseUrl": ".",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "paths": {
       "*": ["node_modules/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "src/types/*.d.ts"
+  ],
   "exclude": ["node_modules"]
 } 

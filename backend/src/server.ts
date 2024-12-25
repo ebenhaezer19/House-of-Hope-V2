@@ -1303,9 +1303,22 @@ app.post('/api/residents/:id/document', upload.single('document'), async (req: R
 });
 
 // Error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err.message);
-  res.status(500).json({ message: 'Internal Server Error' });
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Handle unknown errors
+process.on('uncaughtException', (error: Error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('Unhandled Rejection:', reason);
 });
 
 export default app;

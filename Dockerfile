@@ -4,7 +4,7 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies including OpenSSL
+# Install build dependencies
 RUN apk add --no-cache \
     python3 \
     make \
@@ -13,32 +13,30 @@ RUN apk add --no-cache \
     openssl-dev \
     libc6-compat
 
-# Copy backend files first
+# Copy backend files
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/tsconfig.json ./
 COPY backend/prisma ./prisma/
 COPY backend/src ./src/
 
-# Create .env file for build time
+# Create dummy .env for build
 RUN echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" > .env
 
-# Install backend dependencies
+# Install dependencies
 RUN npm install
 
-# Generate Prisma Client (will use dummy DATABASE_URL)
+# Generate Prisma Client
 RUN npx prisma generate
 
-# Build backend
+# Build TypeScript
 RUN npm run build
 
 # Production stage
 FROM node:18-alpine
 
 # Install production dependencies
-RUN apk add --no-cache \
-    openssl \
-    libc6-compat
+RUN apk add --no-cache openssl libc6-compat
 
 # Set up backend
 WORKDIR /app/backend
@@ -47,12 +45,12 @@ COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/package*.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Generate Prisma Client again for production (will use real DATABASE_URL)
+# Create uploads directory
+RUN mkdir -p uploads
+
+# Generate Prisma Client for production
 RUN npm install
 RUN npx prisma generate
 
-# Expose port
 EXPOSE 5002
-
-# Start command
 CMD ["npm", "start"] 
