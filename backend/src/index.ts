@@ -5,26 +5,34 @@ import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
 
-const port = process.env.PORT || 5002
-
-// Add debug logging
-console.log('\nDatabase connection details:')
-const dbUrl = process.env.DATABASE_URL || ''
-const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@')
-console.log('Database URL:', maskedUrl)
-
+// Debug database connection
+console.log('Database connection details:');
 try {
-  const url = new URL(process.env.DATABASE_URL || '')
-  console.log('Database components:', {
-    protocol: url.protocol,
-    host: url.hostname,
-    port: url.port,
-    database: url.pathname.slice(1),
-    params: url.search,
-    auth: 'present (hidden)'
-  })
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is not set');
+  }
+
+  // Replace template literals if they exist
+  const processedUrl = dbUrl
+    .replace(/\${([^}]+)}/g, (_, key) => process.env[key] || '');
+
+  // Log parsed URL components for debugging (hide sensitive info)
+  const urlObj = new URL(processedUrl);
+  console.log('Database connection components:', {
+    protocol: urlObj.protocol,
+    host: urlObj.hostname,
+    port: urlObj.port,
+    database: urlObj.pathname.slice(1),
+    params: urlObj.search,
+    auth: urlObj.username ? 'present (hidden)' : 'not present'
+  });
+  
+  console.log('Database URL validation:', 'Passed');
 } catch (error) {
-  console.error('Invalid database URL format:', error)
+  console.error('Error with DATABASE_URL:', error.message);
+  console.error('Please make sure DATABASE_URL is properly set in Railway variables');
+  process.exit(1);
 }
 
 const prisma = new PrismaClient({
@@ -35,6 +43,8 @@ const prisma = new PrismaClient({
     }
   }
 })
+
+const port = Number(process.env.PORT) || 5002
 
 // Debug environment variables
 console.log('Environment variables:');
@@ -70,3 +80,10 @@ prisma.$connect()
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err)
 })
+
+console.log('Database URL format check:', {
+  hasProtocol: process.env.DATABASE_URL?.startsWith('postgresql://'),
+  hasHost: process.env.PGHOST ? 'Yes' : 'No',
+  hasPort: process.env.PGPORT ? 'Yes' : 'No',
+  hasDatabase: process.env.PGDATABASE ? 'Yes' : 'No'
+});
