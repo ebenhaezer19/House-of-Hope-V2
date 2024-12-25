@@ -18,11 +18,11 @@ WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/tsconfig.json ./
 COPY backend/prisma ./prisma/
-COPY backend/src ./src/
 
 # Install backend dependencies
 RUN npm install
 RUN npm install -g typescript
+RUN npm install --save-dev @types/helmet @types/compression
 
 # Set temporary DATABASE_URL for prisma generate
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
@@ -30,8 +30,13 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Build backend
-RUN npm run build
+# Copy source files
+COPY backend/src ./src/
+
+# Debug and build backend
+RUN echo "Starting build process..."
+RUN ls -la
+RUN npm run build || (echo "Build failed" && npm run build --verbose && exit 1)
 
 # Setup frontend
 WORKDIR /app/frontend
@@ -78,4 +83,4 @@ RUN npx prisma generate
 EXPOSE 5002
 
 # Start command
-CMD ["npm", "start"] 
+CMD ["npm", "start"]
