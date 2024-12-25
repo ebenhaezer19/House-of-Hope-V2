@@ -9,7 +9,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "noImplicitAny": false,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

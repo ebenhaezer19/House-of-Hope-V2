@@ -204,14 +204,12 @@ export const updatePayment = async (req: Request, res: Response) => {
 export const deletePayment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
     await prisma.payment.delete({
       where: { id: Number(id) }
     });
-
     res.json({ message: 'Pembayaran berhasil dihapus' });
-  } catch (error) {
-    console.error('Error deleting payment:', error);
+  } catch (error: any) {
+    console.error('Error deleting payment:', error.message);
     res.status(500).json({ message: 'Gagal menghapus pembayaran' });
   }
 };
