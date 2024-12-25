@@ -11,7 +11,8 @@ app.use(express.urlencoded({ extended: true }))
 const corsOptions = {
   origin: [
     'https://frontend-house-of-hope.vercel.app',
-    'http://localhost:5173' // untuk development
+    'http://localhost:5173',
+    'https://house-of-hope-v2-production.up.railway.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
