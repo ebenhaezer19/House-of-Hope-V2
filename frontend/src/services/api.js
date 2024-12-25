@@ -4,10 +4,11 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5002',
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
+  withCredentials: false // Set ke false untuk menghindari masalah CORS
 });
 
-// Add request interceptor to add auth token
+// Add request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

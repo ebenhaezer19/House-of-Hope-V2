@@ -8,26 +8,39 @@ const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+  // intercept OPTIONS method
+  if ('OPTIONS' === req.method) {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 const corsOptions = {
   origin: [
     'https://frontend-house-of-hope.vercel.app',
     'https://frontend-n02jogx9n-house-of-hope.vercel.app',
     'http://localhost:5173'
   ],
-  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400 // 24 jam dalam detik
+  credentials: true,
+  optionsSuccessStatus: 200
 }
 
-// Aktifkan CORS untuk semua routes
+// Apply CORS globally
 app.use(cors(corsOptions))
 
-// Tambahkan OPTIONS handler untuk preflight requests
+// Handle preflight requests
 app.options('*', cors(corsOptions))
 
-// Tambahkan setelah middleware CORS
+// Logging middleware
 app.use((req, res, next) => {
   console.log('\n=== Incoming Request ===');
   console.log(`${req.method} ${req.url}`);
@@ -45,7 +58,7 @@ app.get('/', (req, res) => {
 // API Routes with prefix
 app.use('/api', routes)
 
-// Debug route to show all registered routes
+// Debug route
 app.get('/debug/routes', (req, res) => {
   const registeredRoutes = app._router.stack
     .filter((r: any) => r.route || r.name === 'router')
