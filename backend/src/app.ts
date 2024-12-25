@@ -11,15 +11,31 @@ app.use(express.urlencoded({ extended: true }))
 const corsOptions = {
   origin: [
     'https://frontend-house-of-hope.vercel.app',
-    'http://localhost:5173',
-    'https://house-of-hope-v2-production.up.railway.app'
+    'https://frontend-n02jogx9n-house-of-hope.vercel.app',
+    'http://localhost:5173'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 jam dalam detik
 }
 
-app.use(cors(corsOptions));
+// Aktifkan CORS untuk semua routes
+app.use(cors(corsOptions))
+
+// Tambahkan OPTIONS handler untuk preflight requests
+app.options('*', cors(corsOptions))
+
+// Tambahkan setelah middleware CORS
+app.use((req, res, next) => {
+  console.log('\n=== Incoming Request ===');
+  console.log(`${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('======================\n');
+  next();
+});
 
 // Basic test route
 app.get('/', (req, res) => {
