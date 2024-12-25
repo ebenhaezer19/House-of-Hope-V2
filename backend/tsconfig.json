@@ -10,7 +10,12 @@
     "rootDir": "./src",
     "noImplicitAny": false,
     "strictNullChecks": true,
-    "useUnknownInCatchVariables": false
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
