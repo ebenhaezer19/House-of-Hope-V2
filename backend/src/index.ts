@@ -5,13 +5,27 @@ import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
 
+// Validate DATABASE_URL format
+function validateDatabaseUrl(url: string): boolean {
+  try {
+    const pattern = /^postgresql:\/\/[^:]+:[^@]+@[^:]+:\d+\/[^?]+(\?.*)?$/;
+    return pattern.test(url);
+  } catch (error) {
+    return false;
+  }
+}
+
 // Debug database connection
 console.log('Database connection details:');
 try {
   const dbUrl = process.env.DATABASE_URL || '';
+  if (!validateDatabaseUrl(dbUrl)) {
+    throw new Error('Invalid DATABASE_URL format. Expected format: postgresql://user:password@host:port/database');
+  }
   console.log('Database URL format:', dbUrl.replace(/:[^:@]+@/, ':****@'));
 } catch (error) {
-  console.error('Error parsing DATABASE_URL:', error);
+  console.error('Error with DATABASE_URL:', error.message);
+  process.exit(1);
 }
 
 const prisma = new PrismaClient({
