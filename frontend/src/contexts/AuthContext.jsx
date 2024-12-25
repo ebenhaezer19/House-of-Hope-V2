@@ -37,21 +37,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      setError(null)
-      const response = await api.post('/api/auth/login', { email, password })
+      const response = await api.post('/api/auth/login', { email, password });
+      const { token, user } = response.data;
       
-      const { token, user } = response.data
-      localStorage.setItem('token', token)
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      
-      setUser(user)
-      return true
+      localStorage.setItem('token', token);
+      setUser(user);
+      return user;
     } catch (error) {
-      console.error('Login failed:', error)
-      setError(error.response?.data?.message || 'Login gagal')
-      return false
+      console.error('Login error:', error);
+      throw error;
     }
-  }
+  };
 
   const logout = () => {
     localStorage.removeItem('token')
