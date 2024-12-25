@@ -7,14 +7,12 @@ dotenv.config()
 
 // Debug database connection
 console.log('Database connection details:');
-const dbUrl = new URL(process.env.DATABASE_URL || '');
-console.log({
-  host: dbUrl.hostname,
-  port: dbUrl.port,
-  database: dbUrl.pathname.replace('/', ''),
-  ssl: process.env.NODE_ENV === 'production',
-  user: 'hidden'
-});
+try {
+  const dbUrl = process.env.DATABASE_URL || '';
+  console.log('Database URL format:', dbUrl.replace(/:[^:@]+@/, ':****@'));
+} catch (error) {
+  console.error('Error parsing DATABASE_URL:', error);
+}
 
 const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error'],
@@ -49,9 +47,9 @@ prisma.$connect()
   .catch((error) => {
     console.error('Database connection failed:', error)
     console.error('Connection details:', {
-      host: process.env.DATABASE_URL?.split('@')[1]?.split(':')[0] || 'not found',
-      database: 'railway',
-      ssl: process.env.NODE_ENV === 'production'
+      error: error.message,
+      code: error.code,
+      meta: error.meta
     })
     process.exit(1)
   })

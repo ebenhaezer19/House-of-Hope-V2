@@ -11,4 +11,7 @@ restartPolicyMaxRetries = 3
 
 [env]
 NODE_ENV = "production"
-PORT = "5002" 
+PORT = "5002"
+
+[deploy.env]
+DATABASE_URL = "${RAILWAY_POSTGRESQL_URL}?sslmode=require" 
