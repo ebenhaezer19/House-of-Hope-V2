@@ -6,12 +6,57 @@ import { checkRequiredEnvVars } from './utils/checkEnv'
 dotenv.config()
 
 // Validate DATABASE_URL format
-function validateDatabaseUrl(url: string): boolean {
+function validateDatabaseUrl(url: string): { isValid: boolean; error?: string } {
   try {
-    const pattern = /^postgresql:\/\/[^:]+:[^@]+@[^:]+:\d+\/[^?]+(\?.*)?$/;
-    return pattern.test(url);
+    if (!url) {
+      return { isValid: false, error: 'DATABASE_URL is empty' };
+    }
+
+    // Support both postgresql:// and postgres:// protocols
+    const pattern = /^(postgresql|postgres):\/\/[^:]+:[^@]+@[^:]+:\d+\/[^?]+(\?.*)?$/;
+    const isValid = pattern.test(url);
+
+    if (!isValid) {
+      // Parse URL to give more specific error
+      const urlParts = url.split('://');
+      if (urlParts.length !== 2) {
+        return { isValid: false, error: 'URL must start with postgresql:// or postgres://' };
+      }
+
+      const [protocol, rest] = urlParts;
+      if (!['postgresql', 'postgres'].includes(protocol)) {
+        return { isValid: false, error: 'Invalid protocol. Must be postgresql:// or postgres://' };
+      }
+
+      const parts = rest.split('@');
+      if (parts.length !== 2) {
+        return { isValid: false, error: 'Invalid format. Missing @ separator' };
+      }
+
+      const [credentials, hostPort] = parts;
+      if (!credentials.includes(':')) {
+        return { isValid: false, error: 'Invalid credentials format. Must be user:password' };
+      }
+
+      const hostPortParts = hostPort.split(':');
+      if (hostPortParts.length !== 2) {
+        return { isValid: false, error: 'Invalid host:port format' };
+      }
+
+      const [host, portDb] = hostPortParts;
+      if (!portDb.includes('/')) {
+        return { isValid: false, error: 'Missing database name' };
+      }
+
+      const [port] = portDb.split('/');
+      if (isNaN(Number(port))) {
+        return { isValid: false, error: 'Invalid port number' };
+      }
+    }
+
+    return { isValid: true };
   } catch (error) {
-    return false;
+    return { isValid: false, error: 'Error parsing URL: ' + error.message };
   }
 }
 
@@ -19,9 +64,14 @@ function validateDatabaseUrl(url: string): boolean {
 console.log('Database connection details:');
 try {
   const dbUrl = process.env.DATABASE_URL || '';
-  if (!validateDatabaseUrl(dbUrl)) {
-    throw new Error('Invalid DATABASE_URL format. Expected format: postgresql://user:password@host:port/database');
+  console.log('Raw DATABASE_URL:', dbUrl ? 'Present (hidden)' : 'Not set');
+  
+  const validation = validateDatabaseUrl(dbUrl);
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Invalid DATABASE_URL format');
   }
+  
+  console.log('Database URL validation:', 'Passed');
   console.log('Database URL format:', dbUrl.replace(/:[^:@]+@/, ':****@'));
 } catch (error) {
   console.error('Error with DATABASE_URL:', error.message);
