@@ -20,28 +20,16 @@ COPY backend/tsconfig.json ./
 COPY backend/prisma ./prisma/
 COPY backend/src ./src/
 
+# Create .env file for build time
+RUN echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" > .env
+
 # Install backend dependencies
 RUN npm install
-RUN npm install -g typescript
 
-# Generate Prisma Client
+# Generate Prisma Client (will use dummy DATABASE_URL)
 RUN npx prisma generate
 
 # Build backend
-RUN npm run build
-
-# Setup frontend
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-COPY frontend/index.html ./
-COPY frontend/vite.config.js ./
-COPY frontend/tailwind.config.js ./
-COPY frontend/postcss.config.js ./
-COPY frontend/src ./src/
-COPY frontend/public ./public/
-
-# Install frontend dependencies and build
-RUN npm install
 RUN npm run build
 
 # Production stage
@@ -59,13 +47,8 @@ COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/package*.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Set up frontend static files
-COPY --from=builder /app/frontend/dist ../frontend/dist
-
-# Install production dependencies
-RUN npm ci --only=production
-
-# Generate Prisma Client again for production
+# Generate Prisma Client again for production (will use real DATABASE_URL)
+RUN npm install
 RUN npx prisma generate
 
 # Expose port

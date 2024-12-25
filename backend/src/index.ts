@@ -1,6 +1,7 @@
 import app from './app'
 import dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
 const prisma = new PrismaClient({
@@ -15,6 +16,9 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'Not se
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set (hidden)' : 'Not set');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
+
+// Check environment variables before doing anything else
+checkRequiredEnvVars();
 
 // Test database connection
 prisma.$connect()
