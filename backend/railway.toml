@@ -1,19 +1,9 @@
 [build]
-builder = "NIXPACKS"
-buildCommand = "npm install --production=false && npm run build && npm prune --production && npx prisma generate"
+builder = "nixpacks"
+buildCommand = "npm run build"
 
 [deploy]
-startCommand = "npm run start"
-healthcheckPath = "/api/test"
+startCommand = "npm start"
+healthcheckPath = "/"
 healthcheckTimeout = 100
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
-
-[env]
-NODE_ENV = "production"
-PORT = "5002"
-
-[deploy.env]
-DATABASE_URL = "${DATABASE_URL}"
-DIRECT_URL = "${DIRECT_URL}"
-FRONTEND_URL = "https://frontend-house-of-hope.vercel.app" 
+restartPolicyType = "on-failure" 
