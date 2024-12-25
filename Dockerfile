@@ -4,10 +4,16 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# Install build dependencies including OpenSSL
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl \
+    openssl-dev \
+    libc6-compat
 
-# Copy entire backend first
+# Copy backend files first
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/tsconfig.json ./
@@ -41,6 +47,11 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine
 
+# Install production dependencies
+RUN apk add --no-cache \
+    openssl \
+    libc6-compat
+
 # Set up backend
 WORKDIR /app/backend
 COPY --from=builder /app/backend/dist ./dist
@@ -53,6 +64,9 @@ COPY --from=builder /app/frontend/dist ../frontend/dist
 
 # Install production dependencies
 RUN npm ci --only=production
+
+# Generate Prisma Client again for production
+RUN npx prisma generate
 
 # Expose port
 EXPOSE 5002
