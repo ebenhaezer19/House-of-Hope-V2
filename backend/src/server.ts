@@ -1251,11 +1251,13 @@ app.post('/api/residents/:id/photo', upload.single('photo'), async (req: Request
 
     res.json({ message: 'Foto berhasil diupload' });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error uploading photo:', error);
     res.status(500).json({
       message: 'Gagal mengupload foto',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? 
+        (error instanceof Error ? error.message : String(error)) : 
+        undefined
     });
   }
 });
@@ -1293,32 +1295,34 @@ app.post('/api/residents/:id/document', upload.single('document'), async (req: R
 
     res.json({ message: 'Dokumen berhasil diupload' });
 
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as AppError;
     console.error('Error uploading document:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       message: 'Gagal mengupload dokumen',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// Error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
+// Global error handler
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  const error = err as AppError;
+  console.error('Error:', error);
+  res.status(error.status || 500).json({ 
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: process.env.NODE_ENV === 'development' ? error.message : undefined
   });
 });
 
 // Handle unknown errors
-process.on('uncaughtException', (error: Error) => {
-  console.error('Uncaught Exception:', error);
+process.on('uncaughtException', (error: unknown) => {
+  console.error('Uncaught Exception:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
-  console.error('Unhandled Rejection:', reason);
+  console.error('Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
 });
 
 export default app;

@@ -2,15 +2,11 @@ import { PrismaClient, User } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { config } from '../config/jwt.config'
-import { emailService } from './email.service'
+import { sendEmail } from './email.service'
 import crypto from 'crypto'
 
 export class AuthService {
-  private prisma: PrismaClient
-
-  constructor() {
-    this.prisma = new PrismaClient()
-  }
+  private static prisma = new PrismaClient()
 
   async register(email: string, password: string, name: string): Promise<Omit<User, 'password'>> {
     const existingUser = await this.prisma.user.findUnique({ where: { email } })
@@ -28,7 +24,7 @@ export class AuthService {
     })
 
     // Send welcome email directly
-    await emailService.sendEmail(
+    await sendEmail(
       email,
       'Welcome to House of Hope',
       `<h1>Welcome ${name}!</h1><p>Thank you for registering.</p>`
@@ -123,7 +119,7 @@ export class AuthService {
       const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
 
       try {
-        await emailService.sendEmail(
+        await sendEmail(
           email,
           'Reset Password',
           `
@@ -181,5 +177,35 @@ export class AuthService {
     })
 
     return { message: 'Password reset successfully' }
+  }
+
+  static async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (!user) throw new Error('User not found');
+
+      const resetToken = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_SECRET || 'reset-secret',
+        { expiresIn: '1h' }
+      );
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken,
+          resetTokenExpiry: new Date(Date.now() + 3600000)
+        }
+      });
+
+      await sendEmail(
+        email,
+        'Reset Password',
+        `Click here to reset your password: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+      );
+    } catch (error) {
+      console.error('Send reset email error:', error);
+      throw error;
+    }
   }
 } 

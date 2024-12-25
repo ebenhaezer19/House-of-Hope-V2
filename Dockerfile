@@ -23,7 +23,7 @@ COPY backend/src ./src/
 # Create dummy .env for build
 RUN echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" > .env
 
-# Install dependencies
+# Install ALL dependencies (including devDependencies)
 RUN npm install
 
 # Generate Prisma Client
@@ -48,8 +48,10 @@ COPY --from=builder /app/backend/prisma ./prisma
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Install production dependencies
+RUN npm ci --only=production
+
 # Generate Prisma Client for production
-RUN npm install
 RUN npx prisma generate
 
 EXPOSE 5002

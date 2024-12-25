@@ -1,23 +1,14 @@
 import rateLimit from 'express-rate-limit'
 
-// Rate limit untuk login attempts
-export const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
-  max: 5, // maksimal 5 percobaan
-  message: {
-    message: 'Terlalu banyak percobaan login, silakan coba lagi dalam 15 menit'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
 // Rate limit untuk API secara umum
 export const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 menit
-  max: 60, // maksimal 60 request per menit
-  message: {
-    message: 'Terlalu banyak request, silakan coba lagi nanti'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Terlalu banyak request, coba lagi nanti'
+})
+
+export const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 login attempts per hour
+  message: 'Terlalu banyak percobaan login, coba lagi nanti'
 }) 
