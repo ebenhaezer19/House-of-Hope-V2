@@ -20,22 +20,6 @@ console.log('PORT:', process.env.PORT);
 // Check environment variables before doing anything else
 checkRequiredEnvVars();
 
-// Debug dependencies
-console.log('\nChecking dependencies...');
-try {
-  require('express-rate-limit');
-  console.log('✓ express-rate-limit loaded');
-} catch (e) {
-  console.error('✗ express-rate-limit failed to load:', e);
-}
-
-try {
-  require('zod');
-  console.log('✓ zod loaded');
-} catch (e) {
-  console.error('✗ zod failed to load:', e);
-}
-
 // Test database connection
 prisma.$connect()
   .then(() => {
