@@ -4,11 +4,17 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install ALL dependencies (including devDependencies)
+RUN npm install
+
+# Install TypeScript globally
+RUN npm install -g typescript
 
 # Copy prisma schema
 COPY prisma ./prisma/
@@ -32,6 +38,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
+
+# Install production dependencies only
+RUN npm ci --only=production
 
 # Expose port
 EXPOSE 5002
