@@ -10,20 +10,8 @@
     "rootDir": "./src",
     "noImplicitAny": false,
     "strictNullChecks": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
-    "paths": {
-      "*": ["node_modules/*"]
-    }
+    "useUnknownInCatchVariables": false
   },
-  "include": [
-    "src/**/*",
-    "src/types/*.d.ts"
-  ],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 } 

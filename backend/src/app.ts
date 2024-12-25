@@ -76,4 +76,13 @@ app.get('/debug/routes', (req, res) => {
   res.json(registeredRoutes)
 })
 
+// Health check endpoint
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 export default app

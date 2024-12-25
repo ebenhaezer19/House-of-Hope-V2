@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { AppError } from './types/error';
 
 // Di bagian atas file, hanya definisikan interface yang digunakan
 interface AuthRequest extends Request {
@@ -1295,23 +1296,25 @@ app.post('/api/residents/:id/document', upload.single('document'), async (req: R
 
     res.json({ message: 'Dokumen berhasil diupload' });
 
-  } catch (err: unknown) {
-    const error = err as AppError;
+  } catch (error: unknown) {
     console.error('Error uploading document:', error);
-    res.status(error.status || 500).json({
+    res.status(500).json({
       message: 'Gagal mengupload dokumen',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? 
+        error instanceof Error ? error.message : String(error) : 
+        undefined
     });
   }
 });
 
 // Global error handler
-app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
-  const error = err as AppError;
-  console.error('Error:', error);
-  res.status(error.status || 500).json({ 
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    error: process.env.NODE_ENV === 'development' ? 
+      err instanceof Error ? err.message : String(err) : 
+      undefined
   });
 });
 

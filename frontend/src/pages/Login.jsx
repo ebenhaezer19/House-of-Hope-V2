@@ -15,7 +15,7 @@ const Login = () => {
       await login(email, password)
       navigate('/dashboard')
     } catch (error) {
-      setError(error.response?.data?.message || 'Login gagal')
+      setError(error.message || 'Failed to login')
     }
   }
 
@@ -146,7 +146,7 @@ const Login = () => {
           {/* Test credentials */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">Test credentials:</p>
-            <p className="text-sm text-gray-600">Email: admin@example.com</p>
+            <p className="text-sm text-gray-600">Email: admin@houseofhope.com</p>
             <p className="text-sm text-gray-600">Password: admin123</p>
           </div>
         </div>

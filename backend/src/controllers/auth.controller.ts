@@ -9,22 +9,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export class AuthController {
   static async login(req: Request, res: Response): Promise<Response> {
     try {
-      console.log('Login attempt:', req.body);
-      
       const { email, password } = req.body;
-      
-      if (!email || !password) {
-        console.log('Missing email or password');
-        return res.status(400).json({
-          message: 'Email dan password harus diisi'
-        });
-      }
 
       const user = await prisma.user.findUnique({
         where: { email }
       });
-
-      console.log('Found user:', user ? 'yes' : 'no');
 
       if (!user) {
         return res.status(401).json({
@@ -33,8 +22,6 @@ export class AuthController {
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
-      console.log('Password valid:', isValidPassword);
-      
       if (!isValidPassword) {
         return res.status(401).json({
           message: 'Email atau password salah'
@@ -47,20 +34,17 @@ export class AuthController {
         { expiresIn: '24h' }
       );
 
-      // Remove password from response
+      // Hapus password dari response
       const { password: _, ...userWithoutPassword } = user;
 
-      console.log('Login successful for:', email);
       return res.json({
         token,
         user: userWithoutPassword
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
       return res.status(500).json({
-        message: 'Terjadi kesalahan saat login',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Terjadi kesalahan saat login'
       });
     }
   }

@@ -1,9 +1,10 @@
+import type { Router as ExpressRouter } from 'express';
 import express from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import cors from 'cors';
 
-const router = express.Router();
+const router: ExpressRouter = express.Router();
 
 const corsOptions = {
   origin: [

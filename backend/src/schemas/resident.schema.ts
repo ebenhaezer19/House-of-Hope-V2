@@ -1,23 +1,17 @@
 import { z } from 'zod'
 
-export const residentSchema = z.object({
-  name: z.string().min(1, 'Nama harus diisi'),
-  nik: z.string().min(16, 'NIK harus 16 digit').max(16),
-  birthPlace: z.string().min(1, 'Tempat lahir harus diisi'),
-  birthDate: z.string().optional(),
+export const createResidentSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  dateOfBirth: z.string().optional(),
   gender: z.enum(['MALE', 'FEMALE']),
-  address: z.string().min(1, 'Alamat harus diisi'),
-  phone: z.string().optional(),
-  education: z.enum(['TK', 'SD', 'SMP', 'SMA', 'KULIAH', 'MAGANG']),
-  schoolName: z.string().min(1, 'Nama sekolah harus diisi'),
-  grade: z.string().optional(),
-  major: z.string().optional(),
-  assistance: z.enum(['YAYASAN', 'DIAKONIA']),
-  details: z.string().optional(),
-  roomId: z.number().int().positive()
+  address: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  medicalConditions: z.string().optional(),
+  roomId: z.number().optional()
 })
 
-export const updateResidentSchema = residentSchema.partial()
+export const updateResidentSchema = createResidentSchema.partial()
 
-export type CreateResidentInput = z.infer<typeof residentSchema>
+export type CreateResidentInput = z.infer<typeof createResidentSchema>
 export type UpdateResidentInput = z.infer<typeof updateResidentSchema> 

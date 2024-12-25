@@ -1,27 +1,44 @@
 import nodemailer from 'nodemailer'
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-})
+export class EmailService {
+  private transporter: nodemailer.Transporter
 
-export const sendEmail = async (to: string, subject: string, html: string) => {
-  try {
-    const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'noreply@houseofhope.com',
-      to,
-      subject,
-      html
+  constructor() {
+    this.transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
     })
-    console.log('Email sent:', info.messageId)
-    return info
-  } catch (error) {
-    console.error('Email error:', error)
-    throw error
   }
-} 
+
+  async sendEmail(to: string, subject: string, html: string) {
+    try {
+      const result = await this.transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to,
+        subject,
+        html
+      })
+      console.log(`Email sent to ${to}`)
+      return result
+    } catch (error: unknown) {
+      console.error('Email sending failed:', error)
+      
+      // Handle error berdasarkan tipenya
+      if (error instanceof Error) {
+        throw new Error(`Failed to send email: ${error.message}`)
+      } else {
+        throw new Error('Failed to send email: Unknown error occurred')
+      }
+    }
+  }
+}
+
+export const emailService = new EmailService() 

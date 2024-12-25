@@ -4,40 +4,52 @@
   "description": "Backend for House of Hope Application",
   "main": "dist/index.js",
   "scripts": {
-    "build": "prisma generate && tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "prisma db seed",
-    "postinstall": "npm run prisma:generate"
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "debug": "nodemon --exec \"node --inspect -r ts-node/register\" src/server.ts",
+    "start:simple": "ts-node src/server.ts",
+    "kill": "node scripts/kill-port.js",
+    "dev:clean": "npm run kill && npm run dev",
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "check-uploads": "node -e \"const fs=require('fs');const path=require('path');const dir=path.resolve(__dirname,'uploads');console.log('Uploads:',{dir,exists:fs.existsSync(dir),files:fs.existsSync(dir)?fs.readdirSync(dir):'none'});\""
   },
   "dependencies": {
     "@prisma/client": "^5.x.x",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.18.x",
-    "express-rate-limit": "^7.1.x",
-    "dotenv": "^16.x.x",
-    "jsonwebtoken": "^9.0.x",
+    "express-rate-limit": "^7.1.5",
+    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.x",
-    "zod": "^3.22.x"
+    "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.x",
-    "@types/cors": "^2.8.x",
-    "@types/express": "^4.17.x",
-    "@types/express-rate-limit": "^6.0.x",
-    "@types/jsonwebtoken": "^9.0.x",
-    "@types/multer": "^1.4.x",
-    "@types/node": "^20.x.x",
-    "@types/nodemailer": "^6.4.x",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^20.17.10",
+    "@types/nodemailer": "^6.4.14",
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.x",
     "prisma": "^5.x.x",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.x.x",
     "typescript": "^5.x.x",
-    "ts-node": "^10.x.x"
+    "zod": "^3.22.4"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
-  }
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "postinstall": "prisma generate",
+  "db:push": "prisma db push",
+  "db:seed": "prisma db seed"
 }
