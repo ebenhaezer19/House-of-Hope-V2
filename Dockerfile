@@ -4,7 +4,7 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies including OpenSSL 3
+# Install build dependencies including OpenSSL
 RUN apk add --no-cache \
     python3 \
     make \
@@ -13,14 +13,14 @@ RUN apk add --no-cache \
     openssl-dev \
     libc6-compat
 
-# Copy backend files
+# Copy backend files first
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/tsconfig.json ./
 COPY backend/prisma ./prisma/
 COPY backend/src ./src/
 
-# Install dependencies
+# Install backend dependencies
 RUN npm install
 RUN npm install -g typescript
 
@@ -30,14 +30,27 @@ RUN npx prisma generate
 # Build backend
 RUN npm run build
 
+# Setup frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+COPY frontend/index.html ./
+COPY frontend/vite.config.js ./
+COPY frontend/tailwind.config.js ./
+COPY frontend/postcss.config.js ./
+COPY frontend/src ./src/
+COPY frontend/public ./public/
+
+# Install frontend dependencies and build
+RUN npm install
+RUN npm run build
+
 # Production stage
 FROM node:18-alpine
 
 # Install production dependencies
 RUN apk add --no-cache \
     openssl \
-    libc6-compat \
-    curl
+    libc6-compat
 
 # Set up backend
 WORKDIR /app/backend
@@ -46,15 +59,14 @@ COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/package*.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Create uploads directory
-RUN mkdir -p uploads && chmod 777 uploads
+# Set up frontend static files
+COPY --from=builder /app/frontend/dist ../frontend/dist
 
-# Generate Prisma Client for production
+# Install production dependencies
+RUN npm ci --only=production
+
+# Generate Prisma Client again for production
 RUN npx prisma generate
-
-# Add Docker healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Expose port
 EXPOSE 5002

@@ -3,12 +3,10 @@ npm-debug.log
 dist
 .env
 .env.*
-!.env.production
 .git
 .gitignore
 README.md
 coverage
 .vscode
 .idea
-*.log
-uploads/* 
+*.log 

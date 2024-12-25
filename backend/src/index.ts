@@ -5,6 +5,10 @@ import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
 
+console.log('Starting server...');
+console.log('Node version:', process.version);
+console.log('Environment:', process.env.NODE_ENV);
+
 // Debug database connection
 console.log('Database connection details:');
 const dbUrl = new URL(process.env.DATABASE_URL || '');
@@ -38,9 +42,11 @@ console.log('PORT:', process.env.PORT);
 checkRequiredEnvVars();
 
 // Test database connection
+console.log('Attempting database connection...');
 prisma.$connect()
   .then(() => {
     console.log('Database connected successfully')
+    console.log('All systems operational');
     
     app.listen(port, '0.0.0.0', () => {
       console.log(`\n=== Server running on port ${port} ===\n`)
