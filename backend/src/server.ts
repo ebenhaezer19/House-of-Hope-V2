@@ -1302,4 +1302,10 @@ app.post('/api/residents/:id/document', upload.single('document'), async (req: R
   }
 });
 
+// Error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Error:', err.message);
+  res.status(500).json({ message: 'Internal Server Error' });
+});
+
 export default app;

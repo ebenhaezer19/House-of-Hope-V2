@@ -52,12 +52,9 @@ export const getPayments = async (req: Request, res: Response) => {
 
     console.log(`Found ${payments.length} payments`);
     res.json(payments);
-  } catch (error) {
-    console.error('Error getting payments:', error);
-    res.status(500).json({ 
-      message: 'Gagal mengambil data pembayaran',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+  } catch (error: any) {
+    console.error('Error getting payments:', error.message);
+    res.status(500).json({ message: 'Failed to get payments' });
   }
 };
 
@@ -132,12 +129,9 @@ export const createPayment = async (req: Request, res: Response) => {
 
     console.log('Payment created:', payment);
     res.status(201).json(payment);
-  } catch (error) {
-    console.error('Error creating payment:', error);
-    res.status(500).json({ 
-      message: 'Gagal membuat pembayaran baru',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+  } catch (error: any) {
+    console.error('Error creating payment:', error.message);
+    res.status(500).json({ message: 'Failed to create payment' });
   }
 };
 

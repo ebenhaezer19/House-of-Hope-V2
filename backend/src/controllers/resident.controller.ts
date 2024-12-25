@@ -100,8 +100,8 @@ export class ResidentController {
         data: resident
       });
 
-    } catch (error) {
-      return res.status(400).json({ 
+    } catch (error: any) {
+      return res.status(400).json({
         message: 'Error creating resident',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
