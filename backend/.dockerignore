@@ -5,4 +5,8 @@ dist
 .env.*
 .git
 .gitignore
-README.md 
+README.md
+coverage
+.vscode
+.idea
+*.log 

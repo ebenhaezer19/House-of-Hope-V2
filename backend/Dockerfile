@@ -1,24 +1,37 @@
-# Base image
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine AS builder
 
-# Create app directory
+# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm install
+RUN npm ci
+
+# Copy prisma schema
+COPY prisma ./prisma/
 
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Copy app source
+# Copy source code
 COPY . .
 
 # Build TypeScript
 RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy built assets from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/prisma ./prisma
 
 # Expose port
 EXPOSE 5002
