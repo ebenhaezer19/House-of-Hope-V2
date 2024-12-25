@@ -40,7 +40,15 @@ RUN npm run build || (echo "Build failed" && npm run build --verbose && exit 1)
 
 # Setup frontend
 WORKDIR /app/frontend
+
+# Copy frontend files
 COPY frontend/package*.json ./
+
+# Install frontend dependencies
+RUN npm install
+RUN npm install react-router-dom react-hot-toast @types/react @types/react-dom
+
+# Copy frontend source files
 COPY frontend/index.html ./
 COPY frontend/vite.config.js ./
 COPY frontend/tailwind.config.js ./
@@ -48,8 +56,12 @@ COPY frontend/postcss.config.js ./
 COPY frontend/src ./src/
 COPY frontend/public ./public/
 
-# Install frontend dependencies and build
-RUN npm install
+# Debug frontend files
+RUN echo "Frontend files:"
+RUN ls -la src/
+RUN ls -la src/routes/
+
+# Build frontend
 RUN npm run build
 
 # Production stage
