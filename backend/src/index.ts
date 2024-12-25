@@ -4,8 +4,25 @@ import { PrismaClient } from '@prisma/client'
 import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
+
+// Debug database connection
+console.log('Database connection details:');
+const dbUrl = new URL(process.env.DATABASE_URL || '');
+console.log({
+  host: dbUrl.hostname,
+  port: dbUrl.port,
+  database: dbUrl.pathname.replace('/', ''),
+  ssl: process.env.NODE_ENV === 'production',
+  user: 'hidden'
+});
+
 const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
 })
 
 const port = Number(process.env.PORT) || 5002

@@ -52,6 +52,9 @@ RUN mkdir -p uploads && chmod 777 uploads
 # Generate Prisma Client for production
 RUN npx prisma generate
 
+# Add database migration/push step
+RUN npx prisma db push --accept-data-loss
+
 # Add Docker healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:${PORT}/health || exit 1
