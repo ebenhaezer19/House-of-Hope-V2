@@ -5,74 +5,28 @@ import { checkRequiredEnvVars } from './utils/checkEnv'
 
 dotenv.config()
 
-// Validate DATABASE_URL format
-function validateDatabaseUrl(url: string): { isValid: boolean; error?: string } {
-  try {
-    if (!url) {
-      return { isValid: false, error: 'DATABASE_URL is empty' };
-    }
-
-    // Support both postgresql:// and postgres:// protocols
-    const pattern = /^(postgresql|postgres):\/\/[^:]+:[^@]+@[^:]+:\d+\/[^?]+(\?.*)?$/;
-    const isValid = pattern.test(url);
-
-    if (!isValid) {
-      // Parse URL to give more specific error
-      const urlParts = url.split('://');
-      if (urlParts.length !== 2) {
-        return { isValid: false, error: 'URL must start with postgresql:// or postgres://' };
-      }
-
-      const [protocol, rest] = urlParts;
-      if (!['postgresql', 'postgres'].includes(protocol)) {
-        return { isValid: false, error: 'Invalid protocol. Must be postgresql:// or postgres://' };
-      }
-
-      const parts = rest.split('@');
-      if (parts.length !== 2) {
-        return { isValid: false, error: 'Invalid format. Missing @ separator' };
-      }
-
-      const [credentials, hostPort] = parts;
-      if (!credentials.includes(':')) {
-        return { isValid: false, error: 'Invalid credentials format. Must be user:password' };
-      }
-
-      const hostPortParts = hostPort.split(':');
-      if (hostPortParts.length !== 2) {
-        return { isValid: false, error: 'Invalid host:port format' };
-      }
-
-      const [host, portDb] = hostPortParts;
-      if (!portDb.includes('/')) {
-        return { isValid: false, error: 'Missing database name' };
-      }
-
-      const [port] = portDb.split('/');
-      if (isNaN(Number(port))) {
-        return { isValid: false, error: 'Invalid port number' };
-      }
-    }
-
-    return { isValid: true };
-  } catch (error) {
-    return { isValid: false, error: 'Error parsing URL: ' + error.message };
-  }
-}
-
 // Debug database connection
 console.log('Database connection details:');
 try {
   const dbUrl = process.env.DATABASE_URL || '';
-  console.log('Raw DATABASE_URL:', dbUrl ? 'Present (hidden)' : 'Not set');
+  console.log('Raw DATABASE_URL:', dbUrl ? 'Present' : 'Not set');
   
-  const validation = validateDatabaseUrl(dbUrl);
-  if (!validation.isValid) {
-    throw new Error(validation.error || 'Invalid DATABASE_URL format');
+  // Simple check if URL is present
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is empty');
   }
+
+  // Log parsed URL components for debugging
+  const urlObj = new URL(dbUrl);
+  console.log('Database connection components:', {
+    protocol: urlObj.protocol,
+    host: urlObj.hostname,
+    port: urlObj.port,
+    database: urlObj.pathname.slice(1),
+    params: urlObj.search
+  });
   
   console.log('Database URL validation:', 'Passed');
-  console.log('Database URL format:', dbUrl.replace(/:[^:@]+@/, ':****@'));
 } catch (error) {
   console.error('Error with DATABASE_URL:', error.message);
   process.exit(1);
