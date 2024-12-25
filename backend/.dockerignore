@@ -8,6 +8,6 @@ README.md
 .idea
 
 # Jangan abaikan file-file ini
-# .env
-# .env.*
-# dist 
+# dist
+# prisma
+# .env*
