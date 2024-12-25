@@ -8,27 +8,30 @@ dotenv.config()
 // Debug database connection
 console.log('Database connection details:');
 try {
-  const dbUrl = process.env.DATABASE_URL || '';
-  console.log('Raw DATABASE_URL:', dbUrl ? 'Present' : 'Not set');
-  
-  // Simple check if URL is present
+  const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
-    throw new Error('DATABASE_URL is empty');
+    throw new Error('DATABASE_URL is not set');
   }
 
-  // Log parsed URL components for debugging
-  const urlObj = new URL(dbUrl);
+  // Replace template literals if they exist
+  const processedUrl = dbUrl
+    .replace(/\${([^}]+)}/g, (_, key) => process.env[key] || '');
+
+  // Log parsed URL components for debugging (hide sensitive info)
+  const urlObj = new URL(processedUrl);
   console.log('Database connection components:', {
     protocol: urlObj.protocol,
     host: urlObj.hostname,
     port: urlObj.port,
     database: urlObj.pathname.slice(1),
-    params: urlObj.search
+    params: urlObj.search,
+    auth: urlObj.username ? 'present (hidden)' : 'not present'
   });
   
   console.log('Database URL validation:', 'Passed');
 } catch (error) {
   console.error('Error with DATABASE_URL:', error.message);
+  console.error('Please make sure DATABASE_URL is properly set in Railway variables');
   process.exit(1);
 }
 
@@ -46,9 +49,11 @@ const port = Number(process.env.PORT) || 5002
 // Debug environment variables
 console.log('Environment variables:');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'Not set');
+console.log('DIRECT_URL:', process.env.DIRECT_URL ? 'Set (hidden)' : 'Not set');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set (hidden)' : 'Not set');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
 
 // Check environment variables before doing anything else
 checkRequiredEnvVars();

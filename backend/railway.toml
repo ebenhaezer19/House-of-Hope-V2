@@ -14,4 +14,6 @@ NODE_ENV = "production"
 PORT = "5002"
 
 [deploy.env]
-DATABASE_URL = "postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" 
+DATABASE_URL = "${DATABASE_URL}"
+DIRECT_URL = "${DIRECT_URL}"
+FRONTEND_URL = "https://frontend-house-of-hope.vercel.app" 
