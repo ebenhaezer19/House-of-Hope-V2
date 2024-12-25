@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install"
+buildCommand = "npm install && npx prisma generate"
 
 [deploy]
 startCommand = "npm run start"
@@ -10,4 +10,5 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
 [env]
-NODE_ENV = "production" 
+NODE_ENV = "production"
+PORT = "5002" 

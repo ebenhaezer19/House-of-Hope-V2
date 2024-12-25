@@ -35,6 +35,18 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const register = async ({ name, email, password }) => {
+    try {
+      setError(null)
+      const response = await api.post('/api/auth/register', { name, email, password })
+      return true
+    } catch (error) {
+      console.error('Registration failed:', error)
+      setError(error.response?.data?.message || 'Registration failed')
+      throw error
+    }
+  }
+
   const login = async (email, password) => {
     try {
       setError(null)
@@ -64,7 +76,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, error }}>
+    <AuthContext.Provider value={{ user, login, logout, register, error }}>
       {children}
     </AuthContext.Provider>
   )
