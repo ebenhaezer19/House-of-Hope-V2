@@ -7,7 +7,10 @@ const app = express();
 
 // Konfigurasi CORS yang lebih permisif
 app.use(cors({
-  origin: true, // Mengizinkan semua origin
+  origin: [
+    'https://frontend-pc0niwnjr-house-of-hope.vercel.app',
+    'http://localhost:5173'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -16,11 +19,10 @@ app.use(cors({
     'Origin',
     'Accept',
     'X-Requested-With'
-  ],
-  exposedHeaders: ['Authorization']
+  ]
 }));
 
-// Nonaktifkan beberapa fitur helmet yang bisa mengganggu CORS
+// Nonaktifkan beberapa fitur helmet
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,

@@ -11,8 +11,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL,
-        changeOrigin: true
+        target: process.env.VITE_API_URL || 'https://house-of-hope-v2-production.up.railway.app',
+        changeOrigin: true,
+        secure: false
       }
     }
   }

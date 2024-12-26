@@ -4,32 +4,31 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
   withCredentials: true
 });
 
-// Request interceptor untuk menambahkan token
+// Add request interceptor untuk debugging
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  config => {
+    console.log('Request:', config);
     return config;
   },
-  (error) => {
+  error => {
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor untuk handle error
+// Add response interceptor untuk debugging
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+  response => {
+    console.log('Response:', response);
+    return response;
+  },
+  error => {
+    console.error('Response Error:', error);
     return Promise.reject(error);
   }
 );
