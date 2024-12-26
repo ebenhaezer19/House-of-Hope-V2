@@ -5,14 +5,9 @@ import compression from 'compression';
 
 const app = express();
 
-// Update CORS configuration dengan URL terbaru
-const corsOptions = {
-  origin: [
-    'https://frontend-lx9pj4gjq-house-of-hope.vercel.app',  // URL terbaru
-    'https://frontend-r2lx9cilc-house-of-hope.vercel.app',  // URL sebelumnya
-    'https://frontend-house-of-hope.vercel.app',            
-    'http://localhost:5173'                                 
-  ],
+// Konfigurasi CORS yang lebih permisif
+app.use(cors({
+  origin: true, // Mengizinkan semua origin
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -23,23 +18,21 @@ const corsOptions = {
     'X-Requested-With'
   ],
   exposedHeaders: ['Authorization']
-};
+}));
 
-// PENTING: Pasang cors sebelum middleware lainnya
-app.use(cors(corsOptions));
-
-// Konfigurasi helmet yang aman untuk CORS
+// Nonaktifkan beberapa fitur helmet yang bisa mengganggu CORS
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Tambahkan middleware OPTIONS global
-app.options('*', cors(corsOptions));
+// Pre-flight request handler
+app.options('*', cors());
 
 // Health check endpoint
 app.get('/api/test', (req, res) => {
