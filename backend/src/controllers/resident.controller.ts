@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { ResidentService } from '../services/resident.service'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, ResidentStatus } from '@prisma/client'
 
 const residentService = new ResidentService()
 const prisma = new PrismaClient()

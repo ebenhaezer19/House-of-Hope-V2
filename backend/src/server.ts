@@ -23,7 +23,13 @@ const prisma = new PrismaClient();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://frontend-pc0niwnjr-house-of-hope.vercel.app',
+  origin: [
+    process.env.FRONTEND_URL || 'https://frontend-bve2p1pp5-house-of-hope.vercel.app',
+    'http://localhost:5173', // Local development
+    'http://localhost:4173', // Local preview
+    'https://house-of-hope-v2.vercel.app', // Production Vercel
+    /\.vercel\.app$/ // Allow all Vercel preview deployments
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length'],
