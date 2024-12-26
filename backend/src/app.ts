@@ -5,11 +5,12 @@ import compression from 'compression';
 
 const app = express();
 
-// Update CORS configuration
+// Update CORS configuration dengan URL frontend yang baru
 const corsOptions = {
   origin: [
-    'https://frontend-house-of-hope.vercel.app',
-    'http://localhost:5173'
+    'https://frontend-r2lx9cilc-house-of-hope.vercel.app',  // URL baru
+    'https://frontend-house-of-hope.vercel.app',            // URL lama
+    'http://localhost:5173'                                 // development
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
