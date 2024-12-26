@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [authenticated, setAuthenticated] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,6 +21,8 @@ export const AuthProvider = ({ children }) => {
       
       if (!token) {
         setUser(null)
+        setAuthenticated(false)
+        setLoading(false)
         return
       }
 
@@ -27,9 +30,11 @@ export const AuthProvider = ({ children }) => {
       
       const response = await api.get('/api/auth/me')
       setUser(response.data.user)
+      setAuthenticated(true)
     } catch (error) {
       console.error('Auth check failed:', error)
       setUser(null)
+      setAuthenticated(false)
       localStorage.removeItem('token')
       delete api.defaults.headers.common['Authorization']
     } finally {
@@ -51,35 +56,47 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login with:', { email });
-      const response = await api.post('/api/auth/login', { email, password });
-      console.log('Login response:', response.data);
+      setLoading(true)
+      setError(null)
       
-      // Simpan token
-      localStorage.setItem('token', response.data.token);
+      const response = await api.post('/api/auth/login', { email, password })
       
-      // Update state
-      setUser(response.data.user);
-      
-      // Redirect ke dashboard setelah login berhasil
-      console.log('Redirecting to dashboard...');
-      navigate('/dashboard');
-      
-      return response.data;
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+        
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
+        
+        setUser(response.data.user)
+        setAuthenticated(true)
+        
+        navigate('/dashboard')
+        return response.data
+      }
     } catch (error) {
-      console.error('Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      throw error;
+      console.error('Login error details:', error)
+      
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Koneksi timeout - silakan coba lagi')
+      }
+      
+      if (error.response?.status === 401) {
+        throw new Error('Email atau password salah')
+      }
+      
+      throw new Error(error.response?.data?.message || 'Gagal login')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
     delete api.defaults.headers.common['Authorization']
     setUser(null)
+    setAuthenticated(false)
+    navigate('/login')
   }
 
   if (loading) {
@@ -87,7 +104,15 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      authenticated,
+      loading,
+      error,
+      login, 
+      logout, 
+      checkAuth 
+    }}>
       {children}
     </AuthContext.Provider>
   )

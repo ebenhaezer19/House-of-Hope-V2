@@ -18,24 +18,35 @@ interface AuthRequest extends Request {
   };
 }
 
+// Add User interface
+interface User {
+  id: number;
+  email: string;
+  password: string;
+  name: string;
+  role: string;
+}
+
 const app = express();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
 
 // CORS configuration
 const corsOptions = {
   origin: [
     process.env.FRONTEND_URL || 'https://frontend-bve2p1pp5-house-of-hope.vercel.app',
-    'http://localhost:5173', // Local development
-    'http://localhost:4173', // Local preview
-    'https://house-of-hope-v2.vercel.app', // Production Vercel
-    /\.vercel\.app$/ // Allow all Vercel preview deployments
+    'http://localhost:5173',  // Development
+    'http://localhost:4173',  // Preview
+    'http://127.0.0.1:5173', // Alternative localhost
+    'http://127.0.0.1:4173', // Alternative preview
+    /\.vercel\.app$/         // All Vercel deployments
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length'],
   exposedHeaders: ['Content-Length', 'Content-Type'],
-  maxAge: 600, // 10 menit
-  preflightContinue: false
+  maxAge: 600
 };
 
 // Basic middleware
@@ -156,7 +167,7 @@ app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> =
     // Find user
     const user = await prisma.user.findUnique({ 
       where: { email } 
-    });
+    }) as User | null;
 
     if (!user) {
       res.status(401).json({ 
@@ -618,11 +629,11 @@ const authMiddleware = async (req: AuthRequest, res: Response, next: Function) =
   }
 };
 
-// Check auth status
+// Auth check endpoint
 app.get('/api/auth/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      res.status(401).json({ message: 'User tidak terautentikasi' });
+      res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
@@ -637,20 +648,14 @@ app.get('/api/auth/me', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     if (!user) {
-      res.status(404).json({ message: 'User tidak ditemukan' });
+      res.status(404).json({ message: 'User not found' });
       return;
     }
 
-    res.json({
-      user,
-      isAuthenticated: true
-    });
+    res.json({ user });
   } catch (error) {
     console.error('Auth check error:', error);
-    res.status(500).json({ 
-      message: 'Gagal memeriksa status autentikasi',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
-    });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -1102,10 +1107,15 @@ app.listen(PORT, () => {
   console.log('=================================');
 });
 
-// Handle shutdown
+// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('Shutting down...');
-  await prisma.$disconnect();
+  try {
+    await prisma.$disconnect();
+    console.log('Database disconnected');
+  } catch (error) {
+    console.error('Error disconnecting from database:', error);
+  }
   process.exit(0);
 });
 
@@ -1345,6 +1355,23 @@ app.delete('/api/residents/:id', async (req: Request, res: Response): Promise<vo
     console.error('Error deleting resident:', error);
     res.status(500).json({ 
       message: 'Gagal menghapus penghuni',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+});
+
+// Database health check
+app.get('/db-health', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: 'Database connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({ 
+      status: 'Database connection failed',
       error: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }

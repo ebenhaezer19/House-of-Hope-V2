@@ -2,13 +2,14 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5002',
+  timeout: 30000,
+  withCredentials: true,
   headers: {
-    'Accept': 'application/json',
     'Content-Type': 'application/json'
   }
 });
 
-// Request interceptor
+// Add auth token to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -16,13 +17,10 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Log request dengan detail lengkap
-    console.log('=== REQUEST DETAILS ===');
-    console.log('URL:', config.url);
-    console.log('Method:', config.method);
-    console.log('Headers:', config.headers);
-    console.log('Data:', config.data);
-    
+    // Log only in development
+    if (import.meta.env.DEV) {
+      console.log('Request:', config.method?.toUpperCase(), config.url);
+    }
     return config;
   },
   (error) => {
@@ -31,20 +29,16 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Add response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    console.log('=== RESPONSE SUCCESS ===');
-    console.log('Status:', response.status);
-    console.log('Data:', response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('=== RESPONSE ERROR ===');
-    if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Data:', error.response.data);
-      console.error('Headers:', error.response.headers);
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout');
+      return Promise.reject({
+        message: 'Request timeout - please try again',
+        status: 408
+      });
     }
     return Promise.reject(error);
   }

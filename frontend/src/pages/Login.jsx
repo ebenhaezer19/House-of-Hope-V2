@@ -1,13 +1,18 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const { login } = useAuth()
+  const { login, authenticated, loading } = useAuth()
   const navigate = useNavigate()
+
+  // Redirect if already authenticated
+  if (authenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
