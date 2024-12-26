@@ -7,11 +7,7 @@ const app = express();
 
 // Update CORS configuration dengan URL frontend yang baru
 const corsOptions = {
-  origin: [
-    'https://frontend-r2lx9cilc-house-of-hope.vercel.app',  // URL baru
-    'https://frontend-house-of-hope.vercel.app',            // URL lama
-    'http://localhost:5173'                                 // development
-  ],
+  origin: true,  // Mengizinkan semua origin untuk sementara
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
