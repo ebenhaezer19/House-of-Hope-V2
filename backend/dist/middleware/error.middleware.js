@@ -9,4 +9,3 @@ const errorMiddleware = (err, _req, res, _next) => {
     });
 };
 exports.errorMiddleware = errorMiddleware;
-//# sourceMappingURL=error.middleware.js.map

@@ -9,4 +9,3 @@ const router = express_1.default.Router();
 const roomController = new room_controller_1.RoomController();
 router.get('/', roomController.getAllRooms);
 exports.default = router;
-//# sourceMappingURL=room.routes.js.map

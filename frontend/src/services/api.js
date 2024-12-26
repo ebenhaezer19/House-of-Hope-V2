@@ -6,31 +6,47 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  withCredentials: true
+  timeout: 10000
 });
 
-// Add request interceptor untuk debugging
+// Auth Services
+export const login = (credentials) => api.post('/api/auth/login', credentials);
+export const register = (userData) => api.post('/api/auth/register', userData);
+export const changePassword = (data) => api.post('/api/auth/change-password', data);
+export const forgotPassword = (email) => api.post('/api/auth/forgot-password', { email });
+export const resetPassword = (data) => api.post('/api/auth/reset-password', data);
+
+// Resident Services
+export const getResidents = () => api.get('/api/residents');
+export const getResident = (id) => api.get(`/api/residents/${id}`);
+export const createResident = (data) => api.post('/api/residents', data);
+export const updateResident = (id, data) => api.put(`/api/residents/${id}`, data);
+export const deleteResident = (id) => api.delete(`/api/residents/${id}`);
+
+// Room Services
+export const getRooms = () => api.get('/api/rooms');
+export const getRoom = (id) => api.get(`/api/rooms/${id}`);
+export const createRoom = (data) => api.post('/api/rooms', data);
+export const updateRoom = (id, data) => api.put(`/api/rooms/${id}`, data);
+export const deleteRoom = (id) => api.delete(`/api/rooms/${id}`);
+
+// Task Services
+export const getTasks = () => api.get('/api/tasks');
+export const getTask = (id) => api.get(`/api/tasks/${id}`);
+export const createTask = (data) => api.post('/api/tasks', data);
+export const updateTask = (id, data) => api.put(`/api/tasks/${id}`, data);
+export const deleteTask = (id) => api.delete(`/api/tasks/${id}`);
+
+// Interceptors
 api.interceptors.request.use(
   config => {
-    console.log('Request:', config);
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
-  error => {
-    console.error('Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor untuk debugging
-api.interceptors.response.use(
-  response => {
-    console.log('Response:', response);
-    return response;
-  },
-  error => {
-    console.error('Response Error:', error);
-    return Promise.reject(error);
-  }
+  error => Promise.reject(error)
 );
 
 export default api;

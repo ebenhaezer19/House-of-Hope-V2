@@ -1,584 +1,522 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import api from '../../services/api'
-import {
-  Alert,
-  Button,
-  Card,
-  Input,
-  Select,
-  Textarea,
-  FileUpload
-} from '../../components/shared'
-import { DocumentIcon } from '@heroicons/react/24/outline'
+import { residentService } from '../../services/resident.service'
+import { Card } from '../../components/shared'
 
 const ResidentForm = () => {
   const navigate = useNavigate()
+  const { id } = useParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [rooms, setRooms] = useState([])
-  const [loadingRooms, setLoadingRooms] = useState(true)
-  const [roomError, setRoomError] = useState(null)
-  const [files, setFiles] = useState({
-    photo: null,
-    documents: [],
-    existingPhoto: null,
-    existingDocuments: []
-  })
   
-  const [masterData, setMasterData] = useState({
-    statuses: [
-      { value: 'NEW', label: 'Penghuni Baru' },
-      { value: 'ACTIVE', label: 'Penghuni Aktif' },
-      { value: 'ALUMNI', label: 'Alumni' }
-    ],
-    genders: [
-      { value: 'MALE', label: 'Laki-laki' },
-      { value: 'FEMALE', label: 'Perempuan' }
-    ],
-    educations: [
-      { value: 'TK', label: 'TK' },
-      { value: 'SD', label: 'SD' },
-      { value: 'SMP', label: 'SMP' },
-      { value: 'SMA', label: 'SMA' },
-      { value: 'KULIAH', label: 'Kuliah' },
-      { value: 'MAGANG', label: 'Magang' }
-    ],
-    assistanceTypes: [
-      { value: 'YAYASAN', label: 'Yayasan' },
-      { value: 'DIAKONIA', label: 'Diakonia' }
-    ]
-  });
-
-  const { id } = useParams();
-  const isEditMode = Boolean(id);
-
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setLoadingRooms(true);
-        const response = await api.get('/api/rooms');
-        
-        const availableRooms = response.data.map(room => ({
-          value: room.id.toString(),
-          label: `${room.number} - Lantai ${room.floor} (${room.availableSpace}/${room.capacity})`,
-          isDisabled: room.availableSpace === 0
-        }));
-
-        setRooms(availableRooms);
-      } catch (error) {
-        console.error('Error fetching rooms:', error);
-        setRoomError('Gagal memuat data kamar');
-      } finally {
-        setLoadingRooms(false);
-      }
-    };
-
-    fetchRooms();
-  }, []);
-
-  useEffect(() => {
-    const fetchResidentData = async () => {
-      if (!id) return;
-
-      try {
-        setLoading(true);
-        const response = await api.get(`/api/residents/${id}`);
-        const resident = response.data;
-
-        setFormData({
-          name: resident.name,
-          nik: resident.nik,
-          birthPlace: resident.birthPlace,
-          birthDate: resident.birthDate,
-          gender: resident.gender,
-          address: resident.address,
-          phone: resident.phone || '',
-          education: resident.education,
-          schoolName: resident.schoolName,
-          grade: resident.grade || '',
-          major: resident.major || '',
-          assistance: resident.assistance,
-          details: resident.details || '',
-          roomId: resident.roomId.toString(),
-          status: resident.status,
-          exitDate: resident.exitDate ? new Date(resident.exitDate).toISOString().split('T')[0] : '',
-          alumniNotes: resident.alumniNotes || ''
-        });
-
-        const existingPhoto = resident.documents?.find(doc => doc.type === 'photo');
-        const existingDocs = resident.documents?.filter(doc => doc.type === 'document');
-
-        setFiles(prev => ({
-          ...prev,
-          existingPhoto: existingPhoto,
-          existingDocuments: existingDocs
-        }));
-
-      } catch (error) {
-        console.error('Error fetching resident:', error);
-        setError('Gagal memuat data penghuni');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchResidentData();
-  }, [id]);
-
   const [formData, setFormData] = useState({
-    // Data Pribadi
     name: '',
     nik: '',
     birthPlace: '',
     birthDate: '',
-    gender: '',
+    gender: 'MALE',
     address: '',
     phone: '',
-    
-    // Data Pendidikan
-    education: 'SD',
+    education: 'SMA',
     schoolName: '',
     grade: '',
     major: '',
-    
-    // Data Bantuan
     assistance: 'YAYASAN',
     details: '',
-    
-    // Room
     roomId: '',
-    
-    // File
-    photo: null,
-    documents: [],
-    
-    // Status - default ke NEW untuk penghuni baru
     status: 'NEW',
-    exitDate: '',
-    alumniNotes: ''
+    documents: []
   })
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    
-    console.log('Form change:', { name, value });
-    
-    setFormData(prev => {
-      const newData = { ...prev, [name]: value };
+  useEffect(() => {
+    fetchRooms()
+    if (id) {
+      fetchResident()
+    }
+  }, [id])
 
-      // Khusus untuk status ALUMNI
-      if (name === 'status') {
-        if (value !== 'ALUMNI') {
-          // Reset alumni fields jika status bukan ALUMNI
-          newData.exitDate = '';
-          newData.alumniNotes = '';
-        }
+  const fetchRooms = async () => {
+    try {
+      const response = await residentService.getRooms()
+      setRooms(response.data)
+    } catch (error) {
+      console.error('Error fetching rooms:', error)
+      setError('Gagal memuat data kamar: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const fetchResident = async () => {
+    try {
+      setLoading(true)
+      const response = await residentService.getById(id)
+      const resident = response.data
+      if (resident.birthDate) {
+        resident.birthDate = new Date(resident.birthDate).toISOString().split('T')[0]
       }
-
-      return newData;
-    });
-  };
-
-  const handleFileChange = (e) => {
-    const { name, files: uploadedFiles } = e.target
-    
-    console.log('File upload:', {
-      name,
-      files: uploadedFiles,
-      count: uploadedFiles?.length
-    })
-
-    if (name === 'photo') {
-      setFiles(prev => ({
-        ...prev,
-        photo: uploadedFiles[0]
-      }))
-    } else if (name === 'documents') {
-      setFiles(prev => ({
-        ...prev,
-        documents: Array.from(uploadedFiles)
-      }))
+      setFormData(resident)
+    } catch (error) {
+      console.error('Error fetching resident:', error)
+      setError('Gagal memuat data penghuni: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      // Validasi NIK
-      if (formData.nik.length !== 16) {
-        throw new Error('NIK harus 16 digit');
-      }
-
-      // Validasi format NIK (hanya angka)
-      if (!/^\d+$/.test(formData.nik)) {
-        throw new Error('NIK hanya boleh berisi angka');
-      }
-
-      // Validasi semua field wajib
-      const requiredFields = {
-        name: 'Nama',
-        nik: 'NIK',
-        birthPlace: 'Tempat Lahir',
-        birthDate: 'Tanggal Lahir',
-        gender: 'Jenis Kelamin',
-        address: 'Alamat',
-        education: 'Pendidikan',
-        schoolName: 'Nama Sekolah',
-        assistance: 'Jenis Bantuan',
-        roomId: 'Kamar',
-        status: 'Status'
+      // Format data yang akan dikirim
+      const submitData = {
+        name: formData.name.trim(),
+        nik: formData.nik.trim(),
+        birthPlace: formData.birthPlace.trim(),
+        birthDate: formData.birthDate || null,
+        gender: formData.gender || 'MALE',
+        address: (formData.address || '').trim(),
+        phone: formData.phone ? formData.phone.trim() : null,
+        education: formData.education || 'SMA',
+        schoolName: (formData.schoolName || '').trim(),
+        grade: formData.grade ? formData.grade.trim() : null,
+        major: formData.major ? formData.major.trim() : null,
+        assistance: formData.assistance || 'YAYASAN',
+        details: formData.details ? formData.details.trim() : null,
+        roomId: formData.roomId ? Number(formData.roomId) : null,
+        status: formData.status || 'NEW'
       };
 
-      const missingFields = Object.entries(requiredFields)
-        .filter(([key]) => !formData[key])
-        .map(([_, label]) => label);
+      // Log data sebelum dikirim
+      console.log('=== FORM SUBMIT DEBUG ===');
+      console.log('Form data:', formData);
+      console.log('Submit data:', submitData);
 
-      if (missingFields.length > 0) {
-        throw new Error(`Field berikut harus diisi: ${missingFields.join(', ')}`);
-      }
-
-      // Validasi khusus untuk alumni
-      if (formData.status === 'ALUMNI') {
-        if (!formData.exitDate || !formData.alumniNotes) {
-          throw new Error('Mohon lengkapi data alumni');
-        }
-      }
-
-      // Siapkan FormData
-      const formDataToSend = new FormData();
-      formDataToSend.append('data', JSON.stringify(formData));
-      
-      if (files.photo) {
-        formDataToSend.append('photo', files.photo);
-      }
-      
-      files.documents?.forEach(doc => {
-        formDataToSend.append('documents', doc);
-      });
-
-      // Kirim ke API berdasarkan mode
-      const url = isEditMode ? `/api/residents/${id}` : '/api/residents';
-      const method = isEditMode ? 'put' : 'post';
-
-      await api[method](url, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      navigate('/dashboard/residents', {
-        state: { 
-          message: `Data penghuni berhasil ${isEditMode ? 'diperbarui' : 'ditambahkan'}`
-        }
-      });
-
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      
-      // Handle specific errors
-      if (error.response?.data?.error?.includes('Unique constraint failed')) {
-        setError('NIK sudah terdaftar. Silakan gunakan NIK lain.');
+      if (id) {
+        await residentService.update(id, submitData);
       } else {
-        setError(error.response?.data?.message || error.message);
+        await residentService.create(submitData);
       }
+
+      navigate('/dashboard/residents');
+    } catch (error) {
+      console.error('Error saving resident:', error);
+      setError(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    navigate('/dashboard/residents')
-  }
+  const handleDelete = async (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus penghuni ini? Semua dokumen terkait juga akan dihapus.')) {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('=== DELETE DEBUG ===');
+        console.log('Deleting resident:', id);
+        
+        await residentService.delete(id);
+        
+        alert('Penghuni berhasil dihapus');
+        navigate('/dashboard/residents');
+      } catch (error) {
+        console.error('Error deleting resident:', error);
+        const errorMessage = error.response?.data?.message || error.message;
+        setError(`Gagal menghapus penghuni: ${errorMessage}`);
+        alert('Gagal menghapus penghuni. ' + errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Validasi file
+    for (const file of files) {
+      // Validasi ukuran (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`File ${file.name} terlalu besar. Maksimal 5MB`);
+        return;
+      }
+      
+      // Validasi tipe file
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        setError(`File ${file.name} tidak didukung. Format yang didukung: JPG, PNG, PDF`);
+        return;
+      }
+
+      // Buat FormData baru untuk setiap file
+      const formData = new FormData();
+      
+      // Tentukan tipe dokumen berdasarkan mime type
+      const isImage = file.type.startsWith('image/');
+      
+      // Gunakan nama field yang sesuai berdasarkan tipe file
+      if (isImage) {
+        formData.append('photo', file);  // Untuk foto
+      } else {
+        formData.append('file', file);   // Untuk dokumen
+      }
+      
+      console.log('=== FILE DEBUG ===');
+      console.log('File name:', file.name);
+      console.log('File type:', file.type);
+      console.log('Is image:', isImage);
+
+      try {
+        setLoading(true);
+        console.log('=== UPLOAD DEBUG ===');
+        console.log('Resident ID:', id);
+        console.log('FormData entries:');
+        for (let pair of formData.entries()) {
+          console.log(pair[0], pair[1]);
+        }
+        
+        // Upload file satu per satu
+        const endpoint = isImage ? 'photo' : 'document';
+        await residentService.uploadDocuments(id, formData, endpoint);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        setError('Gagal mengunggah file: ' + (error.response?.data?.message || error.message));
+        return;
+      }
+    }
+
+    try {
+      // Tunggu sebentar sebelum fetch ulang data
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Fetch ulang data penghuni untuk mendapatkan dokumen terbaru
+      const updatedResident = await residentService.getById(id);
+      
+      // Update state dengan data terbaru
+      if (updatedResident.data) {
+        console.log('=== UPDATED RESIDENT DATA ===');
+        console.log('Updated documents:', updatedResident.data.documents);
+        setFormData(prev => ({
+          ...prev,
+          documents: updatedResident.data.documents || []
+        }));
+      }
+
+      // Reset input file
+      e.target.value = '';
+      
+      alert('Dokumen berhasil diunggah');
+    } catch (error) {
+      console.error('Error updating resident data:', error);
+      setError('Gagal memperbarui data: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">
-        {isEditMode ? 'Edit Penghuni' : 'Tambah Penghuni Baru'}
-      </h2>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {id ? 'Edit Penghuni' : 'Tambah Penghuni'}
+        </h1>
+      </div>
 
-      {error && <Alert type="error" message={error} />}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Data Pribadi */}
-        <Card>
-          <h3 className="text-lg font-medium mb-4">Data Pribadi</h3>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Input
-              label="Nama Lengkap"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-            
-            <Input
-              label="NIK"
-              name="nik"
-              value={formData.nik}
-              onChange={(e) => {
-                // Hanya terima input angka
-                const value = e.target.value.replace(/\D/g, '');
-                if (value.length <= 16) {
-                  handleChange({
-                    target: {
-                      name: 'nik',
-                      value
-                    }
-                  });
-                }
-              }}
-              required
-              maxLength={16}
-              pattern="\d*"
-              placeholder="Masukkan 16 digit NIK"
-              help="NIK harus 16 digit angka"
-            />
-
-            <Input
-              label="Tempat Lahir"
-              name="birthPlace"
-              value={formData.birthPlace}
-              onChange={handleChange}
-              required
-            />
-
-            <Input
-              type="date"
-              label="Tanggal Lahir"
-              name="birthDate"
-              value={formData.birthDate}
-              onChange={handleChange}
-              required
-            />
-            
-            <Select
-              label="Jenis Kelamin"
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Pilih Jenis Kelamin</option>
-              {masterData.genders.map(gender => (
-                <option key={gender.value} value={gender.value}>
-                  {gender.label}
-                </option>
-              ))}
-            </Select>
-
-            <Input
-              label="No. Telepon"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="mt-4">
-            <Input
-              label="Alamat Lengkap"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
-              multiline
-            />
-          </div>
-        </Card>
-
-        {/* Data Pendidikan */}
-        <Card>
-          <h3 className="text-lg font-medium mb-4">Data Pendidikan</h3>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Select
-              label="Jenjang Pendidikan"
-              name="education"
-              value={formData.education}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Pilih Jenjang</option>
-              {masterData.educations.map(edu => (
-                <option key={edu.value} value={edu.value}>
-                  {edu.label}
-                </option>
-              ))}
-            </Select>
-
-            <Input
-              label="Nama Sekolah"
-              name="schoolName"
-              value={formData.schoolName}
-              onChange={handleChange}
-              required
-              placeholder="Masukkan nama sekolah"
-            />
-
-            <Input
-              label="Kelas/Tingkat"
-              name="grade"
-              value={formData.grade}
-              onChange={handleChange}
-              placeholder="Contoh: Kelas 2 / Semester 3"
-            />
-
-            <Input
-              label="Jurusan"
-              name="major"
-              value={formData.major}
-              onChange={handleChange}
-              placeholder="Opsional"
-            />
-          </div>
-        </Card>
-
-        {/* Data Bantuan */}
-        <Card>
-          <h3 className="text-lg font-medium mb-4">Data Bantuan</h3>
-          <div className="space-y-4">
-            <Select
-              label="Jenis Bantuan"
-              name="assistance"
-              value={formData.assistance}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Pilih Jenis Bantuan</option>
-              {masterData.assistanceTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </Select>
-
-            <Input
-              label="Keterangan Bantuan"
-              name="details"
-              value={formData.details}
-              onChange={handleChange}
-              placeholder="Tambahkan keterangan jika ada"
-              multiline
-            />
-          </div>
-        </Card>
-
-        {/* Penempatan Kamar */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4">Penempatan Kamar</h3>
-          <Select
-            label="Pilih Kamar"
-            name="roomId"
-            value={formData.roomId}
-            onChange={handleChange}
-            required
-            disabled={loadingRooms}
-          >
-            <option value="">
-              {loadingRooms ? 'Memuat data kamar...' : 'Pilih Kamar'}
-            </option>
-            {rooms.map(room => (
-              <option 
-                key={room.value} 
-                value={room.value}
-                disabled={room.isDisabled}
-              >
-                {room.label}
-              </option>
-            ))}
-          </Select>
-          {roomError && <p className="text-red-500 text-sm mt-1">{roomError}</p>}
-        </div>
-
-        {/* Status Penghuni */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4">Status Penghuni</h3>
-          <Select
-            label="Status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Pilih Status</option>
-            {masterData.statuses.map(status => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </Select>
-
-          {formData.status === 'ALUMNI' && (
-            <div className="mt-4 space-y-4">
-              <Input
-                type="date"
-                label="Tanggal Keluar"
-                name="exitDate"
-                value={formData.exitDate}
-                onChange={handleChange}
-                required
-              />
-              <Input
-                label="Keterangan Alumni"
-                name="alumniNotes"
-                value={formData.alumniNotes}
-                onChange={handleChange}
-                required
-              />
+      <Card className="overflow-hidden">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 p-4 rounded-lg">
+              <div className="text-red-700">{error}</div>
             </div>
           )}
-        </div>
 
-        {/* Tambahkan preview foto yang sudah ada */}
-        {files.existingPhoto && (
-          <div className="mt-4">
-            <p className="text-sm text-gray-500">Foto saat ini:</p>
-            <img 
-              src={`${import.meta.env.VITE_API_URL}${files.existingPhoto.path}`}
-              alt="Foto penghuni"
-              className="mt-2 w-32 h-32 object-cover rounded-lg"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Data Pribadi */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium text-gray-900">Data Pribadi</h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">NIK</label>
+                <input
+                  type="text"
+                  value={formData.nik}
+                  onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tempat Lahir</label>
+                <input
+                  type="text"
+                  value={formData.birthPlace}
+                  onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+                <input
+                  type="date"
+                  value={formData.birthDate}
+                  onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="MALE">Laki-laki</option>
+                  <option value="FEMALE">Perempuan</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Alamat</label>
+                <textarea
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">No. Telepon</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Data Pendidikan dan Bantuan */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium text-gray-900">Data Pendidikan & Bantuan</h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Pendidikan</label>
+                <select
+                  value={formData.education}
+                  onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="TK">TK</option>
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                  <option value="KULIAH">Kuliah</option>
+                  <option value="MAGANG">Magang</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nama Sekolah/Institusi</label>
+                <input
+                  type="text"
+                  value={formData.schoolName}
+                  onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kelas/Tingkat</label>
+                <input
+                  type="text"
+                  value={formData.grade}
+                  onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jurusan</label>
+                <input
+                  type="text"
+                  value={formData.major}
+                  onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jenis Bantuan</label>
+                <select
+                  value={formData.assistance}
+                  onChange={(e) => setFormData({ ...formData, assistance: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="YAYASAN">Yayasan</option>
+                  <option value="DIAKONIA">Diakonia</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kamar</label>
+                <select
+                  value={formData.roomId}
+                  onChange={(e) => setFormData({ ...formData, roomId: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="">Pilih Kamar</option>
+                  {rooms.map(room => (
+                    <option key={room.id} value={room.id}>
+                      {room.number} - Lantai {room.floor}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="NEW">Baru</option>
+                  <option value="ACTIVE">Aktif</option>
+                  <option value="ALUMNI">Alumni</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Keterangan Tambahan</label>
+                <textarea
+                  value={formData.details || ''}
+                  onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Tambahkan list dokumen yang sudah ada */}
-        {files.existingDocuments?.length > 0 && (
-          <div className="mt-4">
-            <p className="text-sm text-gray-500">Dokumen saat ini:</p>
-            <ul className="mt-2 space-y-2">
-              {files.existingDocuments.map((doc, index) => (
-                <li key={index} className="flex items-center space-x-2">
-                  <DocumentIcon className="h-5 w-5 text-gray-500" />
-                  <span className="text-sm text-gray-700">{doc.name}</span>
-                </li>
-              ))}
-            </ul>
+          {/* Dokumen */}
+          {id && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium text-gray-900">Dokumen</h2>
+              
+              {/* Preview foto */}
+              <div className="grid grid-cols-2 gap-4">
+                {formData.documents
+                  ?.filter(doc => doc.type === 'photo')
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map((photo) => (
+                    <div key={photo.id} className="relative">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL}${photo.path}`}
+                        alt={`Foto ${formData.name}`}
+                        className="h-40 w-full object-cover rounded-lg shadow-sm"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/placeholder-avatar.png';
+                        }}
+                      />
+                    </div>
+                  ))}
+              </div>
+
+              {/* Upload file */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Upload Dokumen</label>
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept="image/jpeg,image/png,application/pdf"
+                  multiple
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Format yang didukung: JPG, PNG, PDF. Maksimal 5MB per file.
+                </p>
+              </div>
+
+              {/* Daftar dokumen */}
+              {formData.documents?.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-700">Dokumen Terlampir</h3>
+                  <ul className="mt-2 divide-y divide-gray-200">
+                    {formData.documents.map((doc) => (
+                      <li key={doc.id} className="py-2 flex justify-between items-center">
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-600">{doc.name}</span>
+                          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                            {doc.type === 'photo' ? 'Foto' : 'Dokumen'}
+                          </span>
+                        </div>
+                        <a
+                          href={`${import.meta.env.VITE_API_URL}${doc.path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:text-indigo-900 text-sm"
+                        >
+                          Lihat
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3">
+              <button
+              type="button"
+              onClick={() => navigate('/dashboard/residents')}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Batal
+              </button>
+              <button
+              type="submit"
+                disabled={loading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                {loading ? 'Menyimpan...' : 'Simpan'}
+              </button>
           </div>
-        )}
+        </form>
+        </Card>
+      </div>
+    )
+  }
 
-        {/* Form Actions */}
-        <div className="flex justify-end space-x-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/dashboard/residents')}
-          >
-            Batal
-          </Button>
-          <Button
-            type="submit"
-            loading={loading}
-          >
-            Simpan
-          </Button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
-export default ResidentForm 
+  export default ResidentForm 

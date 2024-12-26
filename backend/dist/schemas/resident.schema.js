@@ -13,4 +13,3 @@ exports.createResidentSchema = zod_1.z.object({
     roomId: zod_1.z.number().optional()
 });
 exports.updateResidentSchema = exports.createResidentSchema.partial();
-//# sourceMappingURL=resident.schema.js.map

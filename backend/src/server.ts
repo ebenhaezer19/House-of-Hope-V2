@@ -648,34 +648,6 @@ app.get('/api/auth/me', authMiddleware, async (req: AuthRequest, res: Response) 
   }
 });
 
-// Delete resident
-app.delete('/api/residents/:id', async (req: Request, res: Response) => {
-  try {
-    const id = parseInt(req.params.id);
-    
-    // Hapus dokumen terkait
-    await prisma.document.deleteMany({
-      where: { residentId: id }
-    });
-
-    // Hapus data penghuni
-    const deleted = await prisma.resident.delete({
-      where: { id }
-    });
-
-    res.json({ 
-      message: 'Data penghuni berhasil dihapus',
-      data: deleted
-    });
-  } catch (error) {
-    console.error('Error deleting resident:', error);
-    res.status(500).json({ 
-      message: 'Gagal menghapus data penghuni',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
-    });
-  }
-});
-
 // Payments routes
 app.get('/api/payments', async (req: Request, res: Response) => {
   try {
@@ -1326,6 +1298,50 @@ process.on('uncaughtException', (error: unknown) => {
 
 process.on('unhandledRejection', (reason: unknown) => {
   console.error('Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
+});
+
+// Delete resident
+app.delete('/api/residents/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Cek apakah resident ada
+    const resident = await prisma.resident.findUnique({
+      where: { id: Number(id) }
+    });
+
+    if (!resident) {
+      res.status(404).json({ message: 'Penghuni tidak ditemukan' });
+      return;
+    }
+
+    // Hapus semua dokumen terkait terlebih dahulu
+    await prisma.document.deleteMany({
+      where: { residentId: Number(id) }
+    });
+
+    // Hapus semua pembayaran terkait
+    await prisma.payment.deleteMany({
+      where: { residentId: Number(id) }
+    });
+
+    // Hapus resident
+    await prisma.resident.delete({
+      where: { id: Number(id) }
+    });
+
+    res.json({ 
+      message: 'Penghuni berhasil dihapus',
+      id: Number(id)
+    });
+
+  } catch (error) {
+    console.error('Error deleting resident:', error);
+    res.status(500).json({ 
+      message: 'Gagal menghapus penghuni',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
 });
 
 export default app;

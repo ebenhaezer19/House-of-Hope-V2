@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserCircleIcon, KeyIcon, BriefcaseIcon, ShieldCheckIcon, UserIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
-import { changePassword } from '../services/api.tsx'
+import { changePassword } from '../services/api'
 
 const Profile = () => {
   const { user: authUser } = useAuth()

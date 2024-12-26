@@ -21,4 +21,3 @@ const passwordChangedTemplate = (name) => `
 </div>
 `;
 exports.passwordChangedTemplate = passwordChangedTemplate;
-//# sourceMappingURL=password-changed.template.js.map

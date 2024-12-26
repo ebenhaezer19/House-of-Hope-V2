@@ -1,651 +1,274 @@
 import { useState, useEffect } from 'react'
-import api from '../../services/api'
-import { 
-  BuildingOfficeIcon,
-  WrenchScrewdriverIcon,
-  CalendarIcon,
-  ClockIcon,
-  PencilIcon,
-  TrashIcon,
-  PlusIcon
+import { Link } from 'react-router-dom'
+import { facilityService } from '../../services/facility.service'
+import { Card } from '../../components/shared'
+import {
+  PlusIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline'
-import { Link, useNavigate } from 'react-router-dom'
-import DetailModal from '../../components/facilities/DetailModal'
-import BookingModal from '../../components/facilities/BookingModal'
-import { Button } from '../../components/shared'
-import MaintenanceModal from '../../components/facilities/MaintenanceModal'
-import EditMaintenanceModal from '../../components/facilities/EditMaintenanceModal'
-import BookingDetailModal from '../../components/facilities/BookingDetailModal'
 
-const FacilityManagement = () => {
-  const [activeTab, setActiveTab] = useState('facilities')
+const FacilityIndex = () => {
   const [facilities, setFacilities] = useState([])
-  const [bookings, setBookings] = useState([])
-  const [maintenanceLogs, setMaintenanceLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [selectedFacility, setSelectedFacility] = useState(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [showBookingModal, setShowBookingModal] = useState(false)
-  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false)
-  const [selectedMaintenanceLog, setSelectedMaintenanceLog] = useState(null)
-  const [showEditMaintenanceModal, setShowEditMaintenanceModal] = useState(false)
-  const [selectedBooking, setSelectedBooking] = useState(null)
-  const [showBookingDetailModal, setShowBookingDetailModal] = useState(false)
-  const navigate = useNavigate()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState({
+    status: '',
+    type: '',
+    location: ''
+  })
 
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('id-ID', {
-      dateStyle: 'long',
-      timeStyle: 'short'
-    });
-  };
+  useEffect(() => {
+    fetchFacilities()
+  }, [])
 
-  const refreshData = async () => {
+  const fetchFacilities = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/api/facilities')
+      const response = await facilityService.getAll()
       setFacilities(response.data)
-      
-      // Extract dan format booking data
-      const currentBookings = response.data.flatMap(f => 
-        f.bookings.map(b => ({
-          ...b,
-          facilityName: f.name,
-          startTimeFormatted: formatDateTime(b.startTime),
-          endTimeFormatted: formatDateTime(b.endTime)
-        }))
-      ).sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
-      
-      setBookings(currentBookings)
-
-      // Extract maintenance logs dengan format yang benar
-      const currentMaintenance = response.data.flatMap(f =>
-        (f.maintenanceLogs || []).map(m => ({
-          ...m,
-          id: m.id,
-          facility: f.name,
-          facilityId: f.id,
-          startDate: new Date(m.startDate).toLocaleDateString('id-ID'),
-          endDate: m.endDate ? new Date(m.endDate).toLocaleDateString('id-ID') : '-',
-          type: m.type,
-          description: m.description,
-          status: m.status,
-          notes: m.notes
-        }))
-      ).sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-
-      console.log('Maintenance logs:', currentMaintenance)
-      setMaintenanceLogs(currentMaintenance)
       setError(null)
     } catch (error) {
-      console.error('Error refreshing data:', error)
-      setError('Gagal memuat data')
+      console.error('Error fetching facilities:', error)
+      setError('Gagal memuat data fasilitas')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    refreshData()
-  }, [])
-
-  const handleDelete = async (facilityId) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus fasilitas ini?')) {
-      return;
+  const handleDelete = async (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus fasilitas ini?')) {
+      try {
+        await facilityService.delete(id)
+        fetchFacilities()
+      } catch (error) {
+        console.error('Error deleting facility:', error)
+        setError('Gagal menghapus fasilitas')
+      }
     }
+  }
 
-    try {
-      await api.delete(`/api/facilities/${facilityId}`);
-      refreshData(); // Refresh data setelah hapus
-      setError(null);
-    } catch (error) {
-      console.error('Error deleting facility:', error);
-      setError('Gagal menghapus fasilitas');
+  const filteredFacilities = facilities.filter(facility => {
+    const matchesSearch = 
+      facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.description.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilters = (
+      (!filters.status || facility.status === filters.status) &&
+      (!filters.type || facility.type === filters.type) &&
+      (!filters.location || facility.location === filters.location)
+    )
+
+    return matchesSearch && matchesFilters
+  })
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'bg-green-100 text-green-800'
+      case 'IN_USE':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'MAINTENANCE':
+        return 'bg-orange-100 text-orange-800'
+      case 'OUT_OF_ORDER':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
-  };
+  }
 
-  // Tambahkan fungsi untuk menghitung booking aktif
-  const getActiveBookingsCount = (facility) => {
-    return facility.bookings?.filter(booking => 
-      new Date(booking.startTime) <= new Date() && 
-      new Date(booking.endTime) >= new Date()
-    ).length || 0;
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <ArrowPathIcon className="w-8 h-8 text-gray-400 animate-spin" />
+      </div>
+    )
+  }
 
-  const handleEditMaintenance = (log) => {
-    try {
-      console.log('Original log:', log);
-
-      // Helper function untuk parse tanggal Indonesia
-      const parseIndonesianDate = (dateStr) => {
-        // Format tanggal Indonesia: "21 Desember 2024"
-        const months = {
-          'Januari': '01', 'Februari': '02', 'Maret': '03', 'April': '04',
-          'Mei': '05', 'Juni': '06', 'Juli': '07', 'Agustus': '08',
-          'September': '09', 'Oktober': '10', 'November': '11', 'Desember': '12'
-        };
-
-        const [day, month, year] = dateStr.split(' ');
-        const monthNumber = months[month];
-        
-        // Format YYYY-MM-DD untuk input type="date"
-        return `${year}-${monthNumber}-${day.padStart(2, '0')}`;
-      };
-
-      // Format log untuk form edit
-      const formattedLog = {
-        id: log.id,
-        facilityId: log.facilityId,
-        type: log.type,
-        description: log.description,
-        startDate: parseIndonesianDate(log.startDate),
-        endDate: log.endDate !== '-' ? parseIndonesianDate(log.endDate) : '',
-        status: log.status,
-        notes: log.notes || ''
-      };
-
-      console.log('Formatted log for edit:', formattedLog);
-      
-      setSelectedMaintenanceLog(formattedLog);
-      setShowEditMaintenanceModal(true);
-    } catch (error) {
-      console.error('Error formatting maintenance log:', error);
-      setError('Gagal memformat data maintenance. Detail: ' + error.message);
-    }
-  };
-
-  const handleDeleteMaintenance = async (logId) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus log maintenance ini?')) {
-      return
-    }
-
-    try {
-      await api.delete(`/api/facilities/maintenance/${logId}`)
-      refreshData() // Refresh data setelah hapus
-      setError(null)
-    } catch (error) {
-      console.error('Error deleting maintenance log:', error)
-      setError('Gagal menghapus log maintenance')
-    }
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-lg">
+        <div className="text-red-700">{error}</div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Manajemen Fasilitas</h1>
-        <div className="mt-4 sm:mt-0">
-          <Link 
-            to="/dashboard/facilities/create"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-          >
-            Tambah Fasilitas
-          </Link>
-        </div>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">Data Fasilitas</h1>
+        <Link
+          to="/dashboard/facilities/new"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          <PlusIcon className="h-5 w-5 mr-2" />
+          Tambah Fasilitas
+        </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <BuildingOfficeIcon className="h-6 w-6 text-gray-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Total Fasilitas</dt>
-                <dd className="text-2xl font-semibold text-gray-900">{facilities.length}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CalendarIcon className="h-6 w-6 text-blue-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Booking Hari Ini</dt>
-                <dd className="text-2xl font-semibold text-gray-900">{bookings.length}</dd>
-              </dl>
+      {/* Search and Filter */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="md:col-span-2">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari nama atau deskripsi..."
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <WrenchScrewdriverIcon className="h-6 w-6 text-yellow-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Dalam Maintenance</dt>
-                <dd className="text-2xl font-semibold text-gray-900">
-                  {facilities.filter(f => f.status === 'maintenance').length}
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <ClockIcon className="h-6 w-6 text-green-400" />
-            </div>
-            <div className="ml-5">
-              <dl>
-                <dt className="text-sm font-medium text-gray-500">Tersedia</dt>
-                <dd className="text-2xl font-semibold text-gray-900">
-                  {facilities.filter(f => f.status === 'available').length}
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-            {[
-              { id: 'facilities', name: 'Daftar Fasilitas' },
-              { id: 'bookings', name: 'Booking' },
-              { id: 'maintenance', name: 'Maintenance' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  ${activeTab === tab.id
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                `}
-              >
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
+          <div className="flex items-center space-x-2 md:col-span-3">
+            <FunnelIcon className="h-5 w-5 text-gray-400" />
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Status</option>
+              <option value="AVAILABLE">Tersedia</option>
+              <option value="IN_USE">Sedang Digunakan</option>
+              <option value="MAINTENANCE">Dalam Perawatan</option>
+              <option value="OUT_OF_ORDER">Rusak</option>
+            </select>
 
-        {/* Content */}
-        <div className="p-6">
-          {activeTab === 'facilities' && (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {facilities.map((facility) => (
-                <div key={facility.id} className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="relative">
-                    <img
-                      src={facility.image}
-                      alt={facility.name}
-                      className="w-full h-48 object-cover"
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Jenis Fasilitas</option>
+              <option value="ROOM">Ruangan</option>
+              <option value="EQUIPMENT">Peralatan</option>
+              <option value="FURNITURE">Furnitur</option>
+              <option value="ELECTRONIC">Elektronik</option>
+            </select>
+
+            <select
+              value={filters.location}
+              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Lokasi</option>
+              <option value="FLOOR_1">Lantai 1</option>
+              <option value="FLOOR_2">Lantai 2</option>
+              <option value="FLOOR_3">Lantai 3</option>
+              <option value="OUTDOOR">Luar Ruangan</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Facilities Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredFacilities.map((facility) => (
+          <Card key={facility.id} className="overflow-hidden">
+            {/* Image */}
+            <div className="aspect-w-16 aspect-h-9">
+              {facility.image_url ? (
+                <img
+                  src={facility.image_url}
+                  alt={facility.name}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-facility.jpg'; // Gambar placeholder jika gambar gagal dimuat
+                  }}
+                />
+              ) : (
+                <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                  <svg
+                    className="h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
-                    {/* Badge booking aktif yang bisa diklik */}
-                    <button
-                      onClick={() => navigate(`/dashboard/facilities/${facility.id}/bookings`)}
-                      className="absolute top-2 right-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
-                    >
-                      <span className="font-bold mr-1">{getActiveBookingsCount(facility)}</span>
-                      <span>Booking</span>
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{facility.name}</h3>
-                        <p className="mt-1 text-sm text-gray-500">{facility.type}</p>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          facility.status === 'available'
-                            ? 'bg-green-100 text-green-800'
-                            : facility.status === 'maintenance'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {facility.status === 'available'
-                            ? 'Tersedia'
-                            : facility.status === 'maintenance'
-                            ? 'Maintenance'
-                            : 'Terpakai'}
-                        </span>
-                        <span className="mt-1 text-xs text-gray-500">
-                          Kapasitas: {facility.capacity} orang
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button 
-                        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-                        onClick={() => {
-                          setSelectedFacility(facility)
-                          setShowDetailModal(true)
-                        }}
-                      >
-                        Detail
-                      </button>
-                      <button 
-                        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-yellow-700 bg-yellow-100 hover:bg-yellow-200"
-                        onClick={() => navigate(`/dashboard/facilities/${facility.id}/edit`)}
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Edit
-                      </button>
-                      <button 
-                        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
-                        onClick={() => handleDelete(facility.id)}
-                      >
-                        <TrashIcon className="h-4 w-4 mr-1" />
-                        Hapus
-                      </button>
-                      <button 
-                        className={`inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded ${
-                          facility.status === 'available'
-                            ? 'text-gray-700 bg-white hover:bg-gray-50'
-                            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                        }`}
-                        onClick={() => {
-                          if (facility.status === 'available') {
-                            setSelectedFacility(facility)
-                            setShowBookingModal(true)
-                          }
-                        }}
-                        disabled={facility.status !== 'available'}
-                      >
-                        Booking
-                      </button>
-                    </div>
-                  </div>
+                  </svg>
                 </div>
-              ))}
+              )}
             </div>
-          )}
 
-          {activeTab === 'bookings' && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fasilitas
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Penghuni
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Waktu Mulai
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Waktu Selesai
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tujuan
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bookings.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                        Belum ada data booking
-                      </td>
-                    </tr>
+            <div className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">{facility.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{facility.description}</p>
+                </div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(facility.status)}`}>
+                  {facility.status === 'AVAILABLE' ? 'Tersedia' :
+                   facility.status === 'IN_USE' ? 'Sedang Digunakan' :
+                   facility.status === 'MAINTENANCE' ? 'Dalam Perawatan' :
+                   facility.status === 'OUT_OF_ORDER' ? 'Rusak' : facility.status}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center text-sm text-gray-500">
+                  <span className="font-medium mr-2">Jenis:</span>
+                  {facility.type === 'ROOM' ? 'Ruangan' :
+                   facility.type === 'EQUIPMENT' ? 'Peralatan' :
+                   facility.type === 'FURNITURE' ? 'Furnitur' :
+                   facility.type === 'ELECTRONIC' ? 'Elektronik' : facility.type}
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <span className="font-medium mr-2">Lokasi:</span>
+                  {facility.location === 'FLOOR_1' ? 'Lantai 1' :
+                   facility.location === 'FLOOR_2' ? 'Lantai 2' :
+                   facility.location === 'FLOOR_3' ? 'Lantai 3' :
+                   facility.location === 'OUTDOOR' ? 'Luar Ruangan' : facility.location}
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <span className="font-medium mr-2">Kondisi:</span>
+                  {facility.condition === 'GOOD' ? (
+                    <div className="flex items-center text-green-500">
+                      <CheckCircleIcon className="h-5 w-5 mr-1" />
+                      <span>Baik</span>
+                    </div>
                   ) : (
-                    bookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {booking.facilityName}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {booking.resident?.name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {new Date(booking.startTime).toLocaleString('id-ID', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short'
-                            })}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {new Date(booking.endTime).toLocaleString('id-ID', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short'
-                            })}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {booking.purpose}
-                          </div>
-                          {booking.notes && (
-                            <div className="text-xs text-gray-500">
-                              {booking.notes}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            booking.status === 'approved' 
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {booking.status === 'approved' ? 'Disetujui' :
-                             booking.status === 'pending' ? 'Menunggu' : 'Ditolak'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
-                            className="text-indigo-600 hover:text-indigo-900"
-                            onClick={() => {
-                              setSelectedBooking(booking)
-                              setShowBookingDetailModal(true)
-                            }}
-                          >
-                            Detail
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    <div className="flex items-center text-red-500">
+                      <XCircleIcon className="h-5 w-5 mr-1" />
+                      <span>Perlu Perbaikan</span>
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              </div>
 
-          {activeTab === 'maintenance' && (
-            <div>
-              {/* Tombol Tambah Log Maintenance */}
-              <div className="mb-4">
-                <Button
-                  onClick={() => setShowMaintenanceModal(true)}
-                  className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              <div className="mt-6 flex justify-end space-x-3">
+                <Link
+                  to={`/dashboard/facilities/${facility.id}/edit`}
+                  className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
                 >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Tambah Log Maintenance
-                </Button>
-              </div>
-
-              {/* Tabel Maintenance */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fasilitas
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tipe
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Deskripsi
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tanggal Mulai
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tanggal Selesai
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Aksi
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {maintenanceLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                          Belum ada data maintenance
-                        </td>
-                      </tr>
-                    ) : (
-                      maintenanceLogs.map((log) => (
-                        <tr key={log.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {log.facility}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {log.type === 'routine' ? 'Rutin' : 'Perbaikan'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
-                              {log.description}
-                            </div>
-                            {log.notes && (
-                              <div className="text-xs text-gray-500">
-                                {log.notes}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {log.startDate}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {log.endDate}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              log.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : log.status === 'in_progress'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {log.status === 'completed' ? 'Selesai' :
-                               log.status === 'in_progress' ? 'Dalam Proses' : 'Pending'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => handleEditMaintenance(log)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-3"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMaintenance(log.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Hapus
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                  Edit
+                </Link>
+                <button
+                  onClick={() => handleDelete(facility.id)}
+                  className="text-red-600 hover:text-red-900 text-sm font-medium"
+                >
+                  Hapus
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </Card>
+        ))}
       </div>
-
-      {/* Modals */}
-      {selectedFacility && (
-        <>
-          <DetailModal
-            isOpen={showDetailModal}
-            onClose={() => {
-              setShowDetailModal(false)
-              setSelectedFacility(null)
-            }}
-            facility={selectedFacility}
-          />
-          <BookingModal
-            isOpen={showBookingModal}
-            onClose={() => {
-              setShowBookingModal(false)
-              setSelectedFacility(null)
-            }}
-            facility={selectedFacility}
-            onSuccess={refreshData}
-          />
-        </>
-      )}
-
-      {/* Maintenance Modal - Pindahkan keluar dari selectedFacility */}
-      <MaintenanceModal
-        isOpen={showMaintenanceModal}
-        onClose={() => {
-          setShowMaintenanceModal(false)
-        }}
-        onSuccess={refreshData}
-      />
-
-      {/* Tambahkan EditMaintenanceModal */}
-      <EditMaintenanceModal
-        isOpen={showEditMaintenanceModal}
-        onClose={() => {
-          setShowEditMaintenanceModal(false)
-          setSelectedMaintenanceLog(null)
-        }}
-        maintenanceLog={selectedMaintenanceLog}
-        onSuccess={() => {
-          refreshData()
-          setShowEditMaintenanceModal(false)
-          setSelectedMaintenanceLog(null)
-        }}
-      />
-
-      {/* Tambahkan BookingDetailModal */}
-      <BookingDetailModal
-        isOpen={showBookingDetailModal}
-        onClose={() => {
-          setShowBookingDetailModal(false)
-          setSelectedBooking(null)
-        }}
-        booking={selectedBooking}
-      />
     </div>
   )
 }
 
-export default FacilityManagement 
+export default FacilityIndex

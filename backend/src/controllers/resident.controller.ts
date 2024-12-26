@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { ResidentService } from '../services/resident.service'
-import { PrismaClient, ResidentStatus } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const residentService = new ResidentService()
 const prisma = new PrismaClient()
@@ -123,12 +123,76 @@ export class ResidentController {
   async deleteResident(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      await prisma.resident.delete({
-        where: { id: Number(id) }
+      
+      // Validate if resident exists first
+      const resident = await prisma.resident.findUnique({
+        where: { id: Number(id) },
+        include: {
+          documents: true,
+          payments: true,
+          bookings: true
+        }
       });
-      return res.json({ message: 'Resident deleted successfully' });
+
+      if (!resident) {
+        return res.status(404).json({ 
+          message: 'Penghuni tidak ditemukan'
+        });
+      }
+
+      console.log('=== DELETE RESIDENT DEBUG ===');
+      console.log('Resident ID:', id);
+      console.log('Documents:', resident.documents.length);
+      console.log('Payments:', resident.payments.length);
+      console.log('Bookings:', resident.bookings.length);
+      
+      try {
+        // Delete all related records in a transaction
+        await prisma.$transaction(async (tx) => {
+          // Delete related bookings first
+          if (resident.bookings.length > 0) {
+            console.log('Deleting bookings...');
+            await tx.booking.deleteMany({
+              where: { residentId: Number(id) }
+            });
+          }
+          
+          // Delete related payments
+          if (resident.payments.length > 0) {
+            console.log('Deleting payments...');
+            await tx.payment.deleteMany({
+              where: { residentId: Number(id) }
+            });
+          }
+          
+          // Delete related documents
+          if (resident.documents.length > 0) {
+            console.log('Deleting documents...');
+            await tx.document.deleteMany({
+              where: { residentId: Number(id) }
+            });
+          }
+          
+          // Finally delete the resident
+          console.log('Deleting resident...');
+          await tx.resident.delete({
+            where: { id: Number(id) }
+          });
+        });
+        
+        console.log('=== DELETE SUCCESS ===');
+        return res.json({ message: 'Penghuni berhasil dihapus' });
+      } catch (error) {
+        console.error('Transaction error:', error);
+        throw error;
+      }
     } catch (error) {
-      return res.status(500).json({ message: 'Error deleting resident' });
+      console.error('=== DELETE ERROR DEBUG ===');
+      console.error('Error:', error);
+      return res.status(500).json({ 
+        message: 'Gagal menghapus data penghuni',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   }
 } 

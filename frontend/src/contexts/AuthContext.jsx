@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react'
 import api from '../services/api'
+import { useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext(null)
 
@@ -7,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     checkAuth()
@@ -49,21 +51,30 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      setError(null)
-      const response = await api.post('/api/auth/login', { email, password })
+      console.log('Attempting login with:', { email });
+      const response = await api.post('/api/auth/login', { email, password });
+      console.log('Login response:', response.data);
       
-      const { token, user } = response.data
-      localStorage.setItem('token', token)
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // Simpan token
+      localStorage.setItem('token', response.data.token);
       
-      setUser(user)
-      return true
+      // Update state
+      setUser(response.data.user);
+      
+      // Redirect ke dashboard setelah login berhasil
+      console.log('Redirecting to dashboard...');
+      navigate('/dashboard');
+      
+      return response.data;
     } catch (error) {
-      console.error('Login failed:', error)
-      setError(error.response?.data?.message || 'Login gagal')
-      return false
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw error;
     }
-  }
+  };
 
   const logout = () => {
     localStorage.removeItem('token')

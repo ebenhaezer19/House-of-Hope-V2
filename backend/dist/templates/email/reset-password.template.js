@@ -24,4 +24,3 @@ const resetPasswordTemplate = (name, resetLink) => `
 </div>
 `;
 exports.resetPasswordTemplate = resetPasswordTemplate;
-//# sourceMappingURL=reset-password.template.js.map

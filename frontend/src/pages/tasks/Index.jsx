@@ -1,36 +1,20 @@
 import { Link } from 'react-router-dom'
 import TaskCalendar from '../../components/TaskCalendar'
 import { useState } from 'react'
+import { taskService } from '../../services/task.service'
 
 const Tasks = () => {
   // Data dummy untuk contoh
-  const [tasks] = useState([
-    {
-      id: 1,
-      resident_name: 'John Doe',
-      gender: 'Laki-laki',
-      class: 'SMA',
-      task_type: 'Piket Harian',
-      task_name: 'Membersihkan Ruang Makan',
-      schedule_date: '2024-03-15',
-      start_time: '08:00',
-      end_time: '09:00',
-      status: 'Pending'
-    },
-    {
-      id: 2,
-      resident_name: 'Jane Doe',
-      gender: 'Perempuan',
-      class: 'SMP',
-      task_type: 'Pelayanan Sosial',
-      task_name: 'Membantu Dapur',
-      schedule_date: '2024-03-15',
-      start_time: '10:00',
-      end_time: '12:00',
-      status: 'Completed'
-    },
-    // Tambahkan data dummy lainnya...
-  ])
+  const [tasks, setTasks] = useState([])
+
+  const fetchTasks = async () => {
+    try {
+      const response = await taskService.getAll();
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">

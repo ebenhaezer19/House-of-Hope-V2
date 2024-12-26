@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Outlet } from 'react-router-dom'
 import api from '../services/api'
 import { Card } from '../components/shared'
 import { Bar, Pie, Doughnut } from 'react-chartjs-2'
@@ -414,140 +414,148 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-semibold text-gray-900">Statistik Penghuni</h1>
-        <button
-          onClick={exportToPDF}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-sm font-medium text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 mr-2" 
-            viewBox="0 0 20 20" 
-            fill="currentColor"
-          >
-            <path 
-              fillRule="evenodd" 
-              d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" 
-              clipRule="evenodd" 
-            />
-          </svg>
-          Export PDF
-        </button>
-      </div>
+      {/* Tampilkan konten dashboard hanya jika di route /dashboard exact */}
+      {window.location.pathname === '/dashboard' && (
+        <>
+          <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+            <h1 className="text-2xl font-semibold text-gray-900">Statistik Penghuni</h1>
+            <button
+              onClick={exportToPDF}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-sm font-medium text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 mr-2" 
+                viewBox="0 0 20 20" 
+                fill="currentColor"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" 
+                  clipRule="evenodd" 
+                />
+              </svg>
+              Export PDF
+            </button>
+          </div>
 
-      <div ref={dashboardRef} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-3">Total Penghuni</h3>
-              <p className="text-3xl font-bold text-indigo-600">{stats.total}</p>
+          <div ref={dashboardRef} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Card className="p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-3">Total Penghuni</h3>
+                  <p className="text-3xl font-bold text-indigo-600">{stats.total}</p>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-3">Berdasarkan Gender</h3>
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <span className="text-gray-600">Laki-laki:</span>
+                      <span className="ml-3 font-bold text-indigo-600">{stats.byGender.MALE}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Perempuan:</span>
+                      <span className="ml-3 font-bold text-indigo-600">{stats.byGender.FEMALE}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-3">Berdasarkan Bantuan</h3>
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <span className="text-gray-600">Yayasan:</span>
+                      <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.YAYASAN}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Diakonia:</span>
+                      <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.DIAKONIA}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
 
-          <Card className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-3">Berdasarkan Gender</h3>
-              <div className="mt-3 space-y-3">
-                <div>
-                  <span className="text-gray-600">Laki-laki:</span>
-                  <span className="ml-3 font-bold text-indigo-600">{stats.byGender.MALE}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="p-6">
+                <h3 className="text-lg font-medium mb-6">Statistik Pendidikan</h3>
+                <div className="h-[300px]">
+                  <Bar data={educationChartData} options={chartOptions} />
                 </div>
-                <div>
-                  <span className="text-gray-600">Perempuan:</span>
-                  <span className="ml-3 font-bold text-indigo-600">{stats.byGender.FEMALE}</span>
-                </div>
+              </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <Card className="p-6">
+                  <h3 className="text-lg font-medium mb-6">Statistik Gender</h3>
+                  <div className="h-[200px]">
+                    <Doughnut data={genderChartData} options={chartOptions} />
+                  </div>
+                </Card>
+
+                <Card className="p-6">
+                  <h3 className="text-lg font-medium mb-6">Statistik Bantuan</h3>
+                  <div className="h-[200px]">
+                    <Pie data={assistanceChartData} options={chartOptions} />
+                  </div>
+                </Card>
               </div>
             </div>
-          </Card>
 
-          <Card className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-3">Berdasarkan Bantuan</h3>
-              <div className="mt-3 space-y-3">
-                <div>
-                  <span className="text-gray-600">Yayasan:</span>
-                  <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.YAYASAN}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Diakonia:</span>
-                  <span className="ml-3 font-bold text-indigo-600">{stats.byAssistance.DIAKONIA}</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-6">Statistik Pendidikan</h3>
-            <div className="h-[300px]">
-              <Bar data={educationChartData} options={chartOptions} />
-            </div>
-          </Card>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <Card className="p-6">
-              <h3 className="text-lg font-medium mb-6">Statistik Gender</h3>
-              <div className="h-[200px]">
-                <Doughnut data={genderChartData} options={chartOptions} />
-              </div>
-            </Card>
+              <h3 className="text-lg font-medium mb-6">Status Penghuni</h3>
+              
+              <div className="grid grid-cols-3 gap-6">
+                <button 
+                  onClick={() => handleStatusClick('ACTIVE')}
+                  className="text-center p-6 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors duration-150"
+                >
+                  <h4 className="text-sm font-medium text-indigo-600 mb-2">Penghuni Aktif</h4>
+                  <p className="text-2xl font-bold text-indigo-600">
+                    {residents.filter(r => r.status === 'ACTIVE').length}
+                  </p>
+                  <span className="text-sm text-indigo-500 mt-2 block">
+                    Klik untuk lihat detail
+                  </span>
+                </button>
 
-            <Card className="p-6">
-              <h3 className="text-lg font-medium mb-6">Statistik Bantuan</h3>
-              <div className="h-[200px]">
-                <Pie data={assistanceChartData} options={chartOptions} />
+                <button 
+                  onClick={() => handleStatusClick('NEW')}
+                  className="text-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-150"
+                >
+                  <h4 className="text-sm font-medium text-green-600 mb-2">Penghuni Baru</h4>
+                  <p className="text-2xl font-bold text-green-600">
+                    {residents.filter(r => r.status === 'NEW').length}
+                  </p>
+                  <span className="text-sm text-green-500 mt-2 block">
+                    Klik untuk lihat detail
+                  </span>
+                </button>
+
+                <button 
+                  onClick={() => handleStatusClick('ALUMNI')}
+                  className="text-center p-6 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-150"
+                >
+                  <h4 className="text-sm font-medium text-yellow-600 mb-2">Alumni</h4>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {residents.filter(r => r.status === 'ALUMNI').length}
+                  </p>
+                  <span className="text-sm text-yellow-500 mt-2 block">
+                    Klik untuk lihat detail
+                  </span>
+                </button>
               </div>
             </Card>
           </div>
-        </div>
+        </>
+      )}
 
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-6">Status Penghuni</h3>
-          
-          <div className="grid grid-cols-3 gap-6">
-            <button 
-              onClick={() => handleStatusClick('ACTIVE')}
-              className="text-center p-6 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors duration-150"
-            >
-              <h4 className="text-sm font-medium text-indigo-600 mb-2">Penghuni Aktif</h4>
-              <p className="text-2xl font-bold text-indigo-600">
-                {residents.filter(r => r.status === 'ACTIVE').length}
-              </p>
-              <span className="text-sm text-indigo-500 mt-2 block">
-                Klik untuk lihat detail
-              </span>
-            </button>
-
-            <button 
-              onClick={() => handleStatusClick('NEW')}
-              className="text-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-150"
-            >
-              <h4 className="text-sm font-medium text-green-600 mb-2">Penghuni Baru</h4>
-              <p className="text-2xl font-bold text-green-600">
-                {residents.filter(r => r.status === 'NEW').length}
-              </p>
-              <span className="text-sm text-green-500 mt-2 block">
-                Klik untuk lihat detail
-              </span>
-            </button>
-
-            <button 
-              onClick={() => handleStatusClick('ALUMNI')}
-              className="text-center p-6 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-150"
-            >
-              <h4 className="text-sm font-medium text-yellow-600 mb-2">Alumni</h4>
-              <p className="text-2xl font-bold text-yellow-600">
-                {residents.filter(r => r.status === 'ALUMNI').length}
-              </p>
-              <span className="text-sm text-yellow-500 mt-2 block">
-                Klik untuk lihat detail
-              </span>
-            </button>
-          </div>
-        </Card>
-      </div>
+      {/* Outlet untuk nested routes */}
+      <Outlet />
     </div>
   )
 }

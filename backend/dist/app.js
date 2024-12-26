@@ -5,88 +5,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const routes_1 = __importDefault(require("./routes"));
+const helmet_1 = __importDefault(require("helmet"));
+const compression_1 = __importDefault(require("compression"));
 const app = (0, express_1.default)();
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
+// Konfigurasi CORS yang lebih permisif
+app.use((0, cors_1.default)({
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use((0, cors_1.default)(corsOptions));
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+// Nonaktifkan helmet sementara untuk debugging
+app.use((0, helmet_1.default)({
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
+app.use((0, compression_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
-app.use((req, _res, next) => {
-    console.log('\n=== Incoming Request ===');
-    console.log(`${req.method} ${req.url}`);
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('Query:', req.query);
-    console.log('======================\n');
+// Log semua requests untuk debugging
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`, {
+        headers: req.headers,
+        body: req.body,
+        query: req.query
+    });
     next();
 });
-app.use('/api', (req, _res, next) => {
-    console.log('\n=== API Request ===');
-    console.log(`${req.method} ${req.baseUrl}${req.path}`);
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('Query:', req.query);
-    console.log('=================\n');
-    next();
-}, routes_1.default);
-console.log('\n=== Registered Routes ===');
-app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-        console.log(`Route: ${middleware.route.path}`);
-        console.log(`Methods: ${Object.keys(middleware.route.methods)}`);
-    }
-    else if (middleware.name === 'router') {
-        console.log(`Router: ${middleware.regexp}`);
-        middleware.handle.stack.forEach((handler) => {
-            if (handler.route) {
-                console.log(`  ${Object.keys(handler.route.methods)} ${handler.route.path}`);
-            }
-        });
-    }
-});
-console.log('=====================\n');
-app.get('/debug/routes', (_req, res) => {
-    const routes = [];
-    console.log('\n=== Registered Routes ===');
-    app._router.stack.forEach((middleware) => {
-        var _a;
-        console.log('Middleware:', middleware.name);
-        if (middleware.route) {
-            console.log('Route:', middleware.route.path);
-            routes.push({
-                path: middleware.route.path,
-                methods: Object.keys(middleware.route.methods || {})
-            });
-        }
-        else if (middleware.name === 'router' && ((_a = middleware.handle) === null || _a === void 0 ? void 0 : _a.stack)) {
-            middleware.handle.stack.forEach((handler) => {
-                if (handler.route) {
-                    console.log('Handler:', handler.route.path);
-                    routes.push({
-                        path: `${middleware.regexp}${handler.route.path}`,
-                        methods: Object.keys(handler.route.methods || {})
-                    });
-                }
-            });
+// Test endpoint
+app.get('/api/test', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        cors: {
+            origin: req.headers.origin,
+            method: req.method
         }
     });
-    console.log('======================\n');
-    res.json({
-        message: 'Available routes',
-        routes: routes
+});
+// Tambah error handler
+app.use((err, req, res, next) => {
+    console.error('Error:', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method
     });
-});
-app.use((_req, res) => {
-    res.status(404).json({ message: 'Not Found' });
-});
-app.use((err, _req, res, _next) => {
-    console.error('Error:', err);
     res.status(500).json({ message: 'Internal Server Error' });
 });
 exports.default = app;
-//# sourceMappingURL=app.js.map
