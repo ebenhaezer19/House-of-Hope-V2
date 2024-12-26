@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 // Konfigurasi CORS
 const corsOptions = {
-  origin: 'http://localhost:5173', // Frontend URL
+  origin: 'https://frontend-lx9pj4gjq-house-of-hope.vercel.app', // Frontend URL
   credentials: true, // Izinkan credentials
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
